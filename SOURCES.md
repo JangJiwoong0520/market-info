@@ -62,5 +62,13 @@
 - **사용자 결정(2026-11-09): 개인·비상업 목적이므로 야후 데이터 사용.**
 - 대응: `config.yaml`에서 지표별 `public: false`로 바꾸면 다음 실행 때 공개 JSON에서 삭제됨.
 
-## 미결정
-- 주요 일정(캘린더): 자동 수집처 약관 미확인 → 당분간 `config.yaml`에 수동 입력
+## 주요 일정 (2026-11-09 확인)
+| 일정 | 출처 | 방식 |
+|---|---|---|
+| 美 CPI·고용·PPI·소매판매·PCE·GDP 발표일 | FRED `fred/release/dates` (release_id 10·50·46·9·54·53, `include_release_dates_with_no_data=true`) | 자동 (FRED 달력 페이지 날짜와 대조 일치) |
+| 브라질 Copom | 브라질 중앙은행 달력 API `api/servico/sitebcb/calendar?lista=Reuniões do Copom` ('Day 2'가 결정일) | 자동 |
+| FOMC | federalreserve.gov/monetarypolicy/fomccalendars.htm (2026·2027) | 수동 (`config.yaml`) |
+| 한은 금통위 | bok.or.kr 통화정책방향 결정회의 일정 (2026년분, 2027년 미공개) | 수동 (`config.yaml`) |
+
+- 美 발표 시각은 동부시간 08:30(FOMC 14:00) → 한국시간 자동 변환(서머타임 반영)
+- 할 일: 한은 2027년 일정 공개되면 `config.yaml`에 추가

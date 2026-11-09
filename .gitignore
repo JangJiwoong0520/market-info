@@ -1,0 +1,29 @@
+# ── 비밀 정보 (절대 올리지 않음) ──
+.env
+.env.*
+!.env.example
+
+# ── 로컬 데이터·DB·내보내기 ──
+# (공개용 데이터는 docs/data/ 에만 둔다)
+data/
+*.db
+*.sqlite
+*.sqlite3
+exports/
+uploads/
+logs/
+*.log
+
+# ── 파이썬 ──
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# ── 편집기·운영체제 ──
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

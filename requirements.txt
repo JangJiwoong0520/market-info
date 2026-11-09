@@ -2,3 +2,4 @@ requests>=2.31
 PyYAML>=6.0
 pandas>=2.1
 yfinance>=0.2.50
+tzdata>=2024.1   # Windows에서 시간대 변환용

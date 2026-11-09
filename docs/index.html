@@ -323,11 +323,13 @@ function cardHTML(card,s){
 function calendarHTML(){
   const rows=M.calendar||[];
   if(!rows.length) return `<div class="cal"><div class="empty">앞으로 3주 안에 등록된 일정이 없습니다.</div></div>`;
+  const todayK=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
   const W="일월화수목금토";
   let html=`<div class="cal"><table><thead><tr><th>시간(KST)</th><th>국가</th><th>일정</th><th>중요도</th></tr></thead><tbody>`, last="";
   rows.forEach(r=>{
-    if(r.date!==last){ const d=new Date(r.date+"T00:00:00"); html+=`<tr class="day"><td colspan="4">${r.date.slice(5).replace("-",".")} (${W[d.getDay()]})</td></tr>`; last=r.date; }
-    html+=`<tr><td>${esc(r.time||"")}</td><td>${esc(r.country||"")}</td><td>${esc(r.event)}</td><td class="imp">${"●".repeat(r.importance||1)}</td></tr>`;
+    if(r.date!==last){ const d=new Date(r.date+"T00:00:00"); html+=`<tr class="day"><td colspan="4">${r.date.slice(5).replace("-",".")} (${W[d.getDay()]})${r.date===todayK?" · 오늘":""}</td></tr>`; last=r.date; }
+    const C={US:"미국",KR:"한국",BR:"브라질"};
+    html+=`<tr><td>${esc(r.time||(r.country==="BR"?"현지":""))}</td><td>${esc(C[r.country]||r.country||"")}</td><td>${esc(r.event)}</td><td class="imp" aria-label="중요도 ${r.importance||1}">${"●".repeat(r.importance||1)}</td></tr>`;
   });
   return html+`</tbody></table></div>`;
 }

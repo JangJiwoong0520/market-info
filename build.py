@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from collectors import brazil, customs, ecos, fred, yahoo
+from collectors import brazil, calendar, customs, ecos, fred, yahoo
 from collectors.common import CollectorError, mask, parse_date, today_kst
 
 ROOT = Path(__file__).resolve().parent
@@ -267,15 +267,21 @@ def main() -> int:
 
     # manifest.json: 페이지와 일일 브리핑이 읽는 목록·요약
     today = today_kst()
-    cal = [c for c in cfg.get("calendar") or []
-           if today.isoformat() <= str(c["date"]) <= (today + timedelta(days=21)).isoformat()]
+    log.info("일정 수집")
+    events, cal_err = calendar.collect(cfg, today)
+    for e in cal_err:
+        failed.append({"id": "calendar", "name": "주요 일정", "error": mask(e)[:200]})
+        log.warning("  ✗ %s", mask(e)[:200])
+    write_json("calendar", {"updated_at": now_kst(), "events": events})
+    cal = [e for e in events if e["date"] <= (today + timedelta(days=21)).isoformat()]
+    log.info("  ✓ 일정 %d건 (3주 이내 %d건)", len(events), len(cal))
     manifest = {
         "site": cfg["site"],
         "periods": cfg["periods"],
         "ticker": [t for t in cfg["ticker"] if t in objs],
         "updated_at": now_kst(),
         "failed": failed,
-        "calendar": sorted(cal, key=lambda c: (str(c["date"]), str(c.get("time", "")))),
+        "calendar": cal,
         "sources": cfg["sources"],
         "indicators": {
             i["id"]: {

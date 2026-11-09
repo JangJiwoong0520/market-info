@@ -17,13 +17,14 @@ from pathlib import Path
 
 import yaml
 
-from collectors import brazil, calendar, customs, ecos, fred, yahoo
+from collectors import brazil, calendar, customs, ecos, fred, treasury, yahoo
 from collectors.common import CollectorError, mask, parse_date, today_kst
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "docs" / "data"
 LOGS = ROOT / "logs"
-COLLECTORS = {"ecos": ecos, "fred": fred, "yahoo": yahoo, "bcb": brazil, "tesouro": brazil, "customs": customs}
+COLLECTORS = {"ecos": ecos, "fred": fred, "yahoo": yahoo, "bcb": brazil, "tesouro": brazil, "customs": customs,
+              "treasury": treasury}
 
 log = logging.getLogger("market-info")
 

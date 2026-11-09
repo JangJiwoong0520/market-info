@@ -26,6 +26,7 @@ periods: ["1Y", "3Y", "5Y", "10Y", "20Y", "YTD"]
 sources:
   ecos:    { name: 한국은행, url: "https://ecos.bok.or.kr" }
   fred:    { name: FRED, url: "https://fred.stlouisfed.org" }
+  treasury: { name: 미 재무부, url: "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve" }
   yahoo:   { name: Yahoo Finance, url: "https://finance.yahoo.com" }
   bcb:     { name: 브라질 중앙은행, url: "https://www.bcb.gov.br" }
   tesouro: { name: 브라질 국고청, url: "https://www.tesourotransparente.gov.br" }
@@ -42,10 +43,11 @@ indicators:
 
   # 미국 금리 (FRED)
   - { id: us_fed, name: 美 기준금리(상단), short: 기준금리(상단), source: fred, series: DFEDTARU, unit: "%", kind: rate, decimals: 2, step: true }
-  - { id: us2y,  name: 美국채 2년,  short: 2년,  source: fred, series: DGS2,  unit: "%", kind: rate, decimals: 2 }
-  - { id: us10y, name: 美국채 10년, short: 10년, source: fred, series: DGS10, unit: "%", kind: rate, decimals: 2 }
-  - { id: us30y, name: 美국채 30년, short: 30년, source: fred, series: DGS30, unit: "%", kind: rate, decimals: 2 }
-  - { id: us_t10y2y, name: 美 장단기 금리차 (10년−2년), short: 美 10Y−2Y, source: derived, formula: [us10y, "-", us2y], source_name: "FRED(연준) 계산", unit: "%p", kind: rate, decimals: 2 }
+  # 美국채: 미 재무부 일일 금리 (FRED DGS2·10·30과 같은 숫자, 재무부는 당일 바로 게시 — FRED는 하루 늦음)
+  - { id: us2y,  name: 美국채 2년,  short: 2년,  source: treasury, column: "2 Yr",  unit: "%", kind: rate, decimals: 2 }
+  - { id: us10y, name: 美국채 10년, short: 10년, source: treasury, column: "10 Yr", unit: "%", kind: rate, decimals: 2 }
+  - { id: us30y, name: 美국채 30년, short: 30년, source: treasury, column: "30 Yr", unit: "%", kind: rate, decimals: 2 }
+  - { id: us_t10y2y, name: 美 장단기 금리차 (10년−2년), short: 美 10Y−2Y, source: derived, formula: [us10y, "-", us2y], source_name: "미 재무부 계산", unit: "%p", kind: rate, decimals: 2 }
 
   # 브라질 금리
   - { id: br_selic, name: 브라질 Selic 기준금리, short: Selic 기준금리, source: bcb, sgs: 432, unit: "%", kind: rate, decimals: 2, step: true }
@@ -63,7 +65,7 @@ indicators:
   - { id: kosdaq, name: 코스닥, source: ecos, stat: 802Y001, item: "0089000", cycle: D, unit: pt, kind: level, decimals: 2 }
   - { id: spx,    name: S&P 500,    source: yahoo, symbol: "^GSPC",  unit: pt, kind: level, decimals: 2, public: true }
   - { id: nasdaq, name: 나스닥 종합, source: yahoo, symbol: "^IXIC",  unit: pt, kind: level, decimals: 2, public: true }
-  - { id: wti,    name: WTI 유가 ($/배럴), short: WTI, source: fred, series: DCOILWTICO, unit: "$", kind: level, decimals: 2 }
+  - { id: wti,    name: "WTI 유가 ($/배럴, 선물)", short: WTI, source: yahoo, symbol: "CL=F", unit: "$", kind: level, decimals: 2, public: true }   # FRED(EIA 현물)는 약 1주 지연
   - { id: gold,   name: "금 ($/온스, 선물)", short: 금, source: yahoo, symbol: "GC=F", unit: "$", kind: level, decimals: 1, public: true }
   - { id: btc,    name: 비트코인 ($), short: 비트코인, source: yahoo, symbol: "BTC-USD", unit: "$", kind: level, decimals: 0, public: true }
 

@@ -474,7 +474,7 @@ function renderFooter(){
   const src=Object.values(M.sources).filter(s=>s.url).map(s=>`<a href="${s.url}" target="_blank" rel="noopener">${esc(s.name)}</a>`).join(" · ");
   document.getElementById("foot").innerHTML=`출처: ${src}<br>
   금리 변화는 bp(0.01%p), 그 밖의 변화는 % · ▲ 상승(빨강) / ▼ 하락(파랑) · 기준일은 각 출처의 최신 발표일<br>
-  브라질 국채 10년은 국고청(Tesouro Direto) 고정금리 이표채(NTN-F) 중 잔존만기 10년에 가장 가까운 종목의 매수 금리 · 금은 COMEX 선물 근월물<br>
+  브라질 국채 10년은 국고청(Tesouro Direto) 고정금리 이표채(NTN-F) 중 잔존만기 10년에 가장 가까운 종목의 매수 금리 · 美국채 금리는 미 재무부 일일 금리 · WTI는 NYMEX 선물, 금은 COMEX 선물 근월물<br>
   품목별 수출은 관세청 HS 4단위 합계로 산업부 품목 분류와 다를 수 있음 · 원/헤알 = 원/달러 ÷ 달러/헤알(PTAX)<br>
   <div class="disc">${esc(M.site.disclaimer)}</div>`;
 }

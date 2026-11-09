@@ -5,10 +5,9 @@ URL 형식: /api/StatisticSearch/{키}/json/kr/{시작행}/{끝행}/{통계표}/
 """
 from __future__ import annotations
 
-import os
 from datetime import date
 
-from .common import CollectorError, get, to_float
+from .common import CollectorError, env_key, get, to_float
 
 BASE = "https://ecos.bok.or.kr/api/StatisticSearch"
 PAGE = 10000
@@ -25,7 +24,7 @@ def _out_date(t: str, cycle: str) -> str:
 
 
 def fetch(ind: dict, start: date, end: date) -> list[list]:
-    key = os.environ.get("ECOS_API_KEY", "").strip() or "sample"   # sample: 연습용(최대 10건)
+    key = env_key("ECOS_API_KEY")   # 테스트 때만 ECOS_API_KEY=sample (연습용, 최대 10건)
     cycle = ind.get("cycle", "D")
     page = 10 if key == "sample" else PAGE
     out, first = [], 1

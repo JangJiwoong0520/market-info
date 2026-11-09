@@ -4,8 +4,8 @@
 !.env.example
 
 # ── 로컬 데이터·DB·내보내기 ──
-# (공개용 데이터는 docs/data/ 에만 둔다)
-data/
+# (루트의 data/만 제외. 공개용 데이터는 docs/data/ 에 두고 커밋한다)
+/data/
 *.db
 *.sqlite
 *.sqlite3

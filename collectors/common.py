@@ -32,7 +32,8 @@ def get(url: str, params: dict | None = None, timeout: int = 60, retries: int = 
         else:
             if r.status_code < 400:
                 return r
-            last = f"HTTP {r.status_code}"
+            body = " ".join(r.text[:120].split())
+            last = f"HTTP {r.status_code}" + (f" {mask(body)}" if body else "")
             if r.status_code < 500 and r.status_code != 429:
                 break
         if i < retries:

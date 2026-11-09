@@ -2,6 +2,8 @@
 
 매일 자동으로 업데이트되는 투자정보 페이지 (거시지표 대시보드 · 공모주 캘린더).
 
+👉 **https://jangjiwoong0520.github.io/market-info/**
+
 - 데이터 수집: GitHub Actions (평일 하루 2회)
 - 화면: GitHub Pages (`docs/` 폴더)
 - 데이터 출처: 한국은행 ECOS, FRED, 브라질 중앙은행·국고청, 관세청 등 — 각 지표에 출처와 기준일 표시

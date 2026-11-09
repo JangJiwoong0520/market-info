@@ -249,7 +249,16 @@ function render(){
 
   // 메뉴 강조
   const links=[...document.querySelectorAll(".nav a")];
-  const so=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ links.forEach(a=>a.classList.toggle("on",a.dataset.s===e.target.id)); const on=links.find(a=>a.dataset.s===e.target.id); on&&on.scrollIntoView({inline:"nearest",block:"nearest"}); } }),{rootMargin:"-45% 0px -50% 0px"});
+  // ※ scrollIntoView는 페이지 전체를 움직여 휠 스크롤과 충돌하므로, 메뉴 줄만 가로로 이동한다
+  const navBox=document.querySelector(".nav .wrap"); let curSec="";
+  const so=new IntersectionObserver(es=>es.forEach(e=>{
+    if(!e.isIntersecting||e.target.id===curSec) return;
+    curSec=e.target.id;
+    links.forEach(a=>a.classList.toggle("on",a.dataset.s===curSec));
+    const on=links.find(a=>a.dataset.s===curSec); if(!on) return;
+    const l=on.offsetLeft-navBox.offsetLeft, r=l+on.offsetWidth;
+    if(l<navBox.scrollLeft||r>navBox.scrollLeft+navBox.clientWidth) navBox.scrollTo({left:Math.max(0,l-16),behavior:"smooth"});
+  }),{rootMargin:"-45% 0px -50% 0px"});
   document.querySelectorAll("main section").forEach(s=>so.observe(s));
 
   renderFooter();

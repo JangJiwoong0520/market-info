@@ -62,6 +62,16 @@
 - **사용자 결정(2026-11-09): 개인·비상업 목적이므로 야후 데이터 사용.**
 - 대응: `config.yaml`에서 지표별 `public: false`로 바꾸면 다음 실행 때 공개 JSON에서 삭제됨.
 
+## 추가 지표 (2026-11-09)
+- 美 장단기 금리차(10년−2년): FRED DGS10 − DGS2 직접 계산 (FRED의 T10Y2Y와 같은 정의, 원자료는 연준 H.15)
+- 달러인덱스(DXY): Yahoo `DX-Y.NYB` (ICE 지수, Yahoo 조건 — `public` 스위치로 끌 수 있음)
+
+## 컨센서스(예상치) 조사 (2026-11-09)
+- ForexFactory: 공식 안내(forexfactory.com/notices)에 "일정표(calendar schedules)를 포함한 콘텐츠의 복사·재게시·재배포는 사전 허락 없이 금지" 명시.
+  사이트·robots.txt 모두 자동 접속을 보안 인증으로 차단(403). 주간 내보내기 피드(nfs.faireconomy.media)도 같은 회사 콘텐츠라 같은 조건으로 판단 → **공개 페이지에 사용하지 않음**.
+- Investing.com: 자동 접속 차단(403).
+- 현재: `config.yaml`의 `calendar_consensus`에 직접 입력 (공개 가능한 출처 값만).
+
 ## 주요 일정 (2026-11-09 확인)
 | 일정 | 출처 | 방식 |
 |---|---|---|

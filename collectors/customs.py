@@ -12,6 +12,7 @@ import re
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from datetime import date
+from urllib.parse import unquote
 
 from .common import CollectorError, env_key, get, to_float
 
@@ -59,6 +60,8 @@ def _call(key: str, hs: str, s: int, e: int) -> list[dict]:
 
 def fetch(ind: dict, start: date, end: date) -> list[list]:
     key = env_key("DATA_GO_KR_API_KEY")
+    if "%" in key:          # Encoding 키를 넣었으면 Decoding 형태로 되돌림 (요청 시 자동 인코딩되므로)
+        key = unquote(key)
     hs = ind["hs"]
     rows: list[dict] = []
     s, last = _ym(start), _ym(end)

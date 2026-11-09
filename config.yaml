@@ -62,7 +62,7 @@ indicators:
   - { id: spx,    name: S&P 500,    source: yahoo, symbol: "^GSPC",  unit: pt, kind: level, decimals: 2, public: true }
   - { id: nasdaq, name: 나스닥 종합, source: yahoo, symbol: "^IXIC",  unit: pt, kind: level, decimals: 2, public: true }
   - { id: wti,    name: WTI 유가 ($/배럴), short: WTI, source: fred, series: DCOILWTICO, unit: "$", kind: level, decimals: 2 }
-  - { id: gold,   name: 금 ($/온스, 선물), short: 금, source: yahoo, symbol: "GC=F", unit: "$", kind: level, decimals: 1, public: true }
+  - { id: gold,   name: "금 ($/온스, 선물)", short: 금, source: yahoo, symbol: "GC=F", unit: "$", kind: level, decimals: 1, public: true }
   - { id: btc,    name: 비트코인 ($), short: 비트코인, source: yahoo, symbol: "BTC-USD", unit: "$", kind: level, decimals: 0, public: true }
 
   # 경제지표 (월간)

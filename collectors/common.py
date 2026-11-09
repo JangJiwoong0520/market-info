@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import time
+from urllib.parse import quote, quote_plus
 from datetime import date, datetime, timedelta
 
 import requests
@@ -20,28 +22,37 @@ class CollectorError(Exception):
 
 
 def get(url: str, params: dict | None = None, timeout: int = 60, retries: int = 3) -> requests.Response:
-    """GET 요청. 네트워크 오류·5xx는 2s, 4s, 8s 간격으로 재시도."""
-    last = None
+    """GET 요청. 네트워크 오류·5xx·429는 2s, 4s, 8s 간격으로 재시도 (4xx는 재시도 안 함)."""
+    last = ""
     for i in range(retries + 1):
         try:
             r = _session.get(url, params=params, timeout=timeout)
-            if r.status_code >= 500 or r.status_code == 429:
-                raise requests.HTTPError(f"HTTP {r.status_code}", response=r)
-            r.raise_for_status()
-            return r
         except requests.RequestException as e:
-            last = e
-            if i < retries:
-                time.sleep(2 ** (i + 1))
-    raise CollectorError(f"요청 실패: {_mask(url)} ({_mask(str(last))})")
+            last = f"연결 오류 {type(e).__name__}"
+        else:
+            if r.status_code < 400:
+                return r
+            last = f"HTTP {r.status_code}"
+            if r.status_code < 500 and r.status_code != 429:
+                break
+        if i < retries:
+            time.sleep(2 ** (i + 1))
+    raise CollectorError(f"요청 실패: {safe_url(url)} ({last})")
 
 
-def _mask(text: str) -> str:
-    """로그에 API 키가 찍히지 않도록 가린다."""
+def safe_url(url: str) -> str:
+    """주소에서 쿼리(?뒤, 키가 들어감)를 지우고, 경로에 든 키도 가린다."""
+    return mask(url.split("?", 1)[0])
+
+
+def mask(text: str) -> str:
+    """로그·JSON에 API 키가 찍히지 않도록 가린다 (원문·URL 인코딩 형태 모두)."""
+    text = re.sub(r"\?[^\s)]*", "?…", text)
     for name in ("ECOS_API_KEY", "FRED_API_KEY", "DATA_GO_KR_API_KEY"):
-        v = os.environ.get(name)
-        if v:
-            text = text.replace(v, "***")
+        v = os.environ.get(name, "").strip()
+        if len(v) >= 6:
+            for form in {v, quote(v, safe=""), quote_plus(v)}:
+                text = text.replace(form, "***")
     return text
 
 

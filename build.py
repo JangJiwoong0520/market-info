@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 
 from collectors import brazil, customs, ecos, fred, yahoo
-from collectors.common import CollectorError, parse_date, today_kst
+from collectors.common import CollectorError, mask, parse_date, today_kst
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "docs" / "data"
@@ -138,7 +138,7 @@ def collect_one(ind: dict, cfg: dict, full: bool) -> tuple[dict, str | None]:
         write_json(ind["id"], obj)
         return obj, None
     except Exception as e:  # noqa: BLE001 — 한 지표 실패가 전체를 멈추지 않게
-        msg = f"{type(e).__name__}: {e}"
+        msg = mask(f"{type(e).__name__}: {e}")   # 키가 섞여 나오지 않게
         if old:
             old.update({"status": "stale", "error": msg[:200], "checked_at": now_kst()})
             write_json(ind["id"], old)

@@ -81,7 +81,7 @@ def fetch_window(ind: dict, old: dict | None, cfg: dict, full: bool) -> date:
     if ind["source"] == "customs":                       # 매월 정정 반영: 최근 2년 다시
         last = old["series"][-1][0]
         return max(first, date(int(last[:4]) - 2, int(last[5:7]), 1))
-    if ind.get("cycle") == "M":                          # 월간 지표는 작아서 매번 전체
+    if ind.get("cycle") in ("M", "Q"):                   # 월간·분기 지표는 작아서 매번 전체
         return first
     return max(first, parse_date(old["series"][-1][0]) - timedelta(days=30))
 
@@ -126,7 +126,7 @@ def collect_one(ind: dict, cfg: dict, full: bool) -> tuple[dict, str | None]:
             new = yoy(new)
         if not new:
             raise CollectorError("받은 데이터가 0건")
-        incremental = old and not full and (ind.get("cycle") != "M" or ind["source"] == "customs")
+        incremental = old and not full and (ind.get("cycle") not in ("M", "Q") or ind["source"] == "customs")
         keep_old = old["series"] if incremental else []
         series = merge(keep_old, new)
         series = [s for s in series if s[0] >= cfg["history_start"][: len(s[0])]]
@@ -218,6 +218,33 @@ def summarize(ind: dict, obj: dict) -> dict:
     return out
 
 
+# ── 일정: 이전 값(우리 데이터) · 컨센서스(직접 입력) ──
+def period_label(key: str, cycle: str | None) -> str:
+    if len(key) == 7:                                  # YYYY-MM
+        m = int(key[5:7])
+        return f"{(m - 1) // 3 + 1}분기" if cycle == "Q" else f"{m}월"
+    return ""                                          # 일별(기준금리 등)은 현재 수준
+
+
+def attach_prev_consensus(events: list[dict], cfg: dict, inds: list[dict], objs: dict) -> None:
+    by_id = {i["id"]: i for i in inds}
+    cons = cfg.get("calendar_consensus") or []
+    for e in events:
+        pid = e.pop("prev_id", None)
+        ind, obj = by_id.get(pid), objs.get(pid) or {}
+        if ind and obj.get("series"):
+            k, v = obj["series"][-1]
+            dec = ind.get("decimals", 2)
+            unit = {"%": "%", "천명": "천명"}.get(ind.get("unit", ""), "")
+            e["prev"] = f"{v:,.{dec}f}{unit}"
+            e["prev_label"] = " ".join(x for x in (period_label(k, ind.get("cycle")), e.pop("prev_note", "")) if x)
+        else:
+            e.pop("prev_note", None)
+        for c in cons:
+            if str(c.get("date")) == e["date"] and str(c.get("match", "")) in e["event"]:
+                e["consensus"] = str(c["value"])
+
+
 # ── 메인 ──────────────────────────────────────────────────
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -272,6 +299,7 @@ def main() -> int:
     for e in cal_err:
         failed.append({"id": "calendar", "name": "주요 일정", "error": mask(e)[:200]})
         log.warning("  ✗ %s", mask(e)[:200])
+    attach_prev_consensus(events, cfg, inds, objs)
     write_json("calendar", {"updated_at": now_kst(), "events": events})
     cal = [e for e in events if e["date"] <= (today + timedelta(days=21)).isoformat()]
     log.info("  ✓ 일정 %d건 (3주 이내 %d건)", len(events), len(cal))

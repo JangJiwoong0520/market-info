@@ -35,8 +35,11 @@ def normalize(ev: dict) -> dict:
     d, t = str(ev["date"]), str(ev.get("time", "") or "")
     if ev.get("time_et"):
         d, t = et_to_kst(d, str(ev["time_et"]))
-    return {"date": d, "time": t, "country": ev.get("country", ""), "event": ev["event"],
-            "importance": int(ev.get("importance", 1)), "source": ev.get("source", "")}
+    out = {"date": d, "time": t, "country": ev.get("country", ""), "event": ev["event"],
+           "importance": int(ev.get("importance", 1)), "source": ev.get("source", "")}
+    if ev.get("prev"):                                  # 이전 값으로 보여줄 지표 id (build.py에서 채움)
+        out["prev_id"], out["prev_note"] = ev["prev"], ev.get("prev_note", "")
+    return out
 
 
 def fred_events(items: list[dict], start: date, end: date) -> list[dict]:
@@ -61,7 +64,7 @@ def copom_events(start: date, end: date) -> list[dict]:
     # 이틀 회의 중 둘째 날(설명에 'Day 2')에 금리 결정 발표 (브라질 장 마감 후 → 한국시간 다음날 아침)
     day2 = sorted({r["dataEvento"][:10] for r in rows if re.search(r"Day\W*2", re.sub(r"<[^>]+>|&#160;|\u200b", " ", r.get("descricao") or ""))})
     return [normalize({"date": d, "country": "BR", "event": "브라질 Copom 기준금리 결정 (현지 날짜)",
-                       "importance": 2, "source": "브라질 중앙은행"}) for d in day2]
+                       "importance": 2, "source": "브라질 중앙은행", "prev": "br_selic"}) for d in day2]
     return out
 
 

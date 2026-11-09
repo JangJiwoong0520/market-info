@@ -24,7 +24,7 @@ def fetch(ind: dict, start: date, end: date) -> list[list]:
     data = get(BASE, params=params).json()
     if "observations" not in data:
         raise CollectorError(f"FRED 오류: {data.get('error_message', data)}")
-    monthly = ind.get("cycle") == "M"
+    monthly = ind.get("cycle") in ("M", "Q")   # 월간·분기는 YYYY-MM
     out = []
     for o in data["observations"]:
         v = to_float(o["value"])

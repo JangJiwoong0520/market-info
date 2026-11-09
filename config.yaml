@@ -73,6 +73,7 @@ indicators:
   - { id: us_nfp,      name: 美 비농업 고용 (전월대비), source: fred, series: PAYEMS, units: chg, cycle: M, unit: 천명, kind: macro, decimals: 0 }
   - { id: us_unrate,   name: 美 실업률, source: fred, series: UNRATE, cycle: M, unit: "%", kind: macro, decimals: 1 }
   - { id: us_retail,   name: 美 소매판매 (전월비), source: fred, series: RSAFS, units: pch, cycle: M, unit: "%", kind: macro, decimals: 1 }
+  - { id: us_gdp,      name: 美 실질 GDP (전기비 연율), source: fred, series: A191RL1Q225SBEA, cycle: Q, unit: "%", kind: macro, decimals: 1, hidden: true }   # 일정 '이전' 값용
   - { id: kr_cpi,      name: 韓 소비자물가 (전년비), source: ecos, stat: 901Y009, item: "0", cycle: M, transform: yoy, unit: "%", kind: macro, decimals: 1 }
   - { id: br_ipca,     name: 브라질 IPCA (12개월 누적), source: bcb, sgs: 13522, cycle: M, unit: "%", kind: macro, decimals: 1 }
 
@@ -164,25 +165,32 @@ calendar_auto:
   # FRED 발표 예정일 — release_id는 FRED 시리즈 페이지의 Release 링크에서 확인 (2026-11-09)
   # 발표 시각은 각 기관 공지 기준 美 동부시간 08:30
   fred_releases:
-    - { release_id: 10, event: 소비자물가(CPI), time_et: "08:30", importance: 3 }
-    - { release_id: 50, event: 고용보고서(비농업 고용·실업률), time_et: "08:30", importance: 3 }
-    - { release_id: 46, event: 생산자물가(PPI), time_et: "08:30", importance: 2 }
-    - { release_id: 9,  event: 소매판매, time_et: "08:30", importance: 2 }
-    - { release_id: 54, event: 개인소득·지출(PCE 물가), time_et: "08:30", importance: 2 }
-    - { release_id: 53, event: GDP, time_et: "08:30", importance: 2 }
+    - { release_id: 10, event: 소비자물가(CPI), time_et: "08:30", importance: 3, prev: us_cpi, prev_note: 전년비 }
+    - { release_id: 50, event: 고용보고서(비농업 고용·실업률), time_et: "08:30", importance: 3, prev: us_nfp }
+    - { release_id: 46, event: 생산자물가(PPI), time_et: "08:30", importance: 2, prev: us_ppi, prev_note: 전년비 }
+    - { release_id: 9,  event: 소매판매, time_et: "08:30", importance: 2, prev: us_retail, prev_note: 전월비 }
+    - { release_id: 54, event: 개인소득·지출(PCE 물가), time_et: "08:30", importance: 2, prev: us_core_pce, prev_note: 근원 전년비 }
+    - { release_id: 53, event: GDP, time_et: "08:30", importance: 2, prev: us_gdp, prev_note: 연율 }
   copom: true          # 브라질 중앙은행 공식 달력 API
 
+# 컨센서스(예상치) — 직접 입력. 같은 날짜 + 일정 이름에 match 글자가 들어간 일정에 붙는다.
+#  ※ ForexFactory·Investing.com은 자동 접속을 차단하고 있어 자동 수집하지 않는다 (2026-11-09 확인).
+#  ※ 회사 단말기(블룸버그 등) 컨센서스는 라이선스상 공개 게시가 제한될 수 있으니, 공개해도 되는 출처의 값만 넣는다.
+# 예) - { date: "2026-11-10", match: CPI, value: "전년비 3.5%" }
+calendar_consensus: []
+
 # 수동 입력 (공식 홈페이지에서 확인한 날짜만 넣는다)
+#  prev: 이전 값으로 보여줄 지표 id, prev_note: 설명(선택)
 calendar:
   # FOMC — federalreserve.gov/monetarypolicy/fomccalendars.htm (2026-11-09 확인). 결정문 14:00 ET
-  - { date: "2026-12-09", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3 }
-  - { date: "2027-01-27", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3 }
-  - { date: "2027-03-17", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3 }
-  - { date: "2027-04-28", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3 }
-  - { date: "2027-06-09", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3 }
-  - { date: "2027-07-28", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3 }
-  - { date: "2027-09-15", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3 }
-  - { date: "2027-10-27", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3 }
-  - { date: "2027-12-08", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3 }
+  - { date: "2026-12-09", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3, prev: us_fed, prev_note: 상단 }
+  - { date: "2027-01-27", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3, prev: us_fed, prev_note: 상단 }
+  - { date: "2027-03-17", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3, prev: us_fed, prev_note: 상단 }
+  - { date: "2027-04-28", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3, prev: us_fed, prev_note: 상단 }
+  - { date: "2027-06-09", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3, prev: us_fed, prev_note: 상단 }
+  - { date: "2027-07-28", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3, prev: us_fed, prev_note: 상단 }
+  - { date: "2027-09-15", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3, prev: us_fed, prev_note: 상단 }
+  - { date: "2027-10-27", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3, prev: us_fed, prev_note: 상단 }
+  - { date: "2027-12-08", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3, prev: us_fed, prev_note: 상단 }
   # 한국은행 금통위 통화정책방향 결정회의 — bok.or.kr 일정 및 자료 (2026-11-09 확인, 2027년 일정은 아직 미공개)
-  - { date: "2026-11-26", time: "오전", country: KR, event: 한은 금통위 기준금리 결정, importance: 3 }
+  - { date: "2026-11-26", time: "오전", country: KR, event: 한은 금통위 기준금리 결정, importance: 3, prev: kr_base }

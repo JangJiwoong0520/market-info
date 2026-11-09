@@ -37,7 +37,7 @@
   --tip:#24324a;--tiptx:#e6ebf2;--warn-bg:#2b2213;--warn-tx:#f3c375;--btn-on:#e6ebf2;--btn-ontx:#0b0f16;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:56px;-webkit-text-size-adjust:100%}
+html{scroll-padding-top:56px;-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--tx);font-family:Pretendard,'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum'}
 a{color:inherit}
 .wrap{max-width:1360px;margin:0 auto;padding:0 16px}
@@ -177,12 +177,10 @@ const PERIOD = {};            // section id → period
     const next=cur==="dark"?"light":"dark";
     document.documentElement.setAttribute("data-theme",next);
     try{localStorage.setItem("theme",next)}catch(e){}
-    CHARTS.forEach(c=>c.drawn&&drawChart(c));
   };
 })();
 
 // ── 숫자·날짜 형식 ─────────────────────────────────
-const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 function fmt(v,dec){ if(v==null||isNaN(v)) return "–"; return Number(v).toLocaleString("ko-KR",{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
 function fmtVal(ind,v){ const u=ind.unit; const s=fmt(v,ind.decimals); return u==="%"?s+"%":u==="억$"?s+"억$":u==="천명"?s+"천명":s; }
 function fmtDate(d){ if(!d) return "–"; return d.length===7? d.replace("-","."): d.slice(2).replace(/-/g,"."); }
@@ -232,7 +230,7 @@ function render(){
       box.innerHTML=periods.map(p=>`<button type="button" data-p="${p}"${p===PERIOD[s.id]?" class=on":""}>${p==="YTD"?"YTD":p.replace("Y","년")}</button>`).join("");
       box.onclick=e=>{ const b=e.target.closest("button"); if(!b) return;
         PERIOD[s.id]=b.dataset.p; box.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
-        CHARTS.filter(c=>c.section.id===s.id&&c.drawn).forEach(drawChart); };
+        CHARTS.filter(c=>c.section.id===s.id&&c.drawn).forEach(queueDraw); };
     }
     (s.cards||[]).forEach(card=>{
       const el=document.getElementById(`cv-${card.main}`);
@@ -262,7 +260,19 @@ function render(){
   document.querySelectorAll("main section").forEach(s=>so.observe(s));
 
   renderFooter();
-  let rt; addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(()=>CHARTS.filter(c=>c.drawn).forEach(drawChart),150); });
+  let rt, lastW=innerWidth;
+  addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(()=>{
+    if(innerWidth===lastW) return;          // 높이만 바뀐 경우(아이폰 주소창 숨김 등)는 무시
+    lastW=innerWidth; CHARTS.filter(c=>c.drawn).forEach(queueDraw);
+  },200); });
+  // 메뉴·요약 띠 클릭 시에만 부드럽게 이동
+  document.addEventListener("click",e=>{
+    const a=e.target.closest('a[href^="#"]'); if(!a) return;
+    const t=document.getElementById(a.getAttribute("href").slice(1)); if(!t) return;
+    e.preventDefault();
+    scrollTo({top:t.getBoundingClientRect().top+scrollY-52,behavior:"smooth"});
+  });
+  addEventListener("scroll",()=>{ if(openTip){ openTip(); openTip=null; } },{passive:true});
 }
 
 function sectionHTML(s){
@@ -338,8 +348,17 @@ function loadSeries(id){
   return LOADING[id];
 }
 function loadAndDraw(c){
-  Promise.all(c.card.lines.map(loadSeries)).then(()=>{ c.drawn=true; drawChart(c); })
+  Promise.all(c.card.lines.map(loadSeries)).then(()=>{ c.drawn=true; queueDraw(c); })
     .catch(()=>{ c.el.innerHTML=`<div class="msg">차트 데이터를 불러오지 못했습니다</div>`; });
+}
+
+// ── 그리기 대기열: 한 프레임에 하나씩 그려 스크롤이 멈추지 않게 ──
+const QUEUE=new Set(); let qRun=false, openTip=null;
+function queueDraw(c){ QUEUE.add(c); if(!qRun){ qRun=true; requestAnimationFrame(runQueue); } }
+function runQueue(){
+  const t0=performance.now();
+  for(const c of QUEUE){ QUEUE.delete(c); drawChart(c); if(performance.now()-t0>6) break; }
+  if(QUEUE.size) requestAnimationFrame(runQueue); else qRun=false;
 }
 
 // ── 기간 계산 ──────────────────────────────────────
@@ -415,37 +434,37 @@ function drawChart(c){
   const Y=v=>padT+(hi-v)/((hi-lo)||1)*(H-padT-padB);
 
   let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(card.title||I[card.main].name)} 차트">`;
-  ticks.forEach(v=>{ const y=Y(v); svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y}" y2="${y}" stroke="${css("--grid")}" stroke-width="1"/><text class="ax" x="${W-padR+6}" y="${y+3.5}">${tickLab(v)}</text>`; });
+  ticks.forEach(v=>{ const y=Y(v); svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y}" y2="${y}" style="stroke:var(${"--grid"})" stroke-width="1"/><text class="ax" x="${W-padR+6}" y="${y+3.5}">${tickLab(v)}</text>`; });
   // x축 눈금
   const spanY=(t1-tmin)/(365.25*864e5);
   const xt=[]; const sy=new Date(tmin).getUTCFullYear(), ey=new Date(t1).getUTCFullYear();
   if(spanY>2.5){ const stepY=spanY>14?5:spanY>6?2:1; for(let y=Math.ceil(sy/stepY)*stepY;y<=ey;y+=stepY){ const t=Date.UTC(y,0,1); if(t>=tmin) xt.push([t,String(y)]); } }
   else { const stepM=spanY>1.2?6:spanY>0.5?3:1; for(let y=sy;y<=ey;y++) for(let m=0;m<12;m+=stepM){ const t=Date.UTC(y,m,1); if(t>=tmin&&t<=t1) xt.push([t,m===0?`${y}`:`${m+1}월`]); } }
-  xt.forEach(([t,lab])=>{ const x=X(t); if(x<padL+10||x>W-padR-10) return; svg+=`<line x1="${x}" x2="${x}" y1="${padT}" y2="${H-padB}" stroke="${css("--grid")}" stroke-width="1"/><text class="ax" x="${x}" y="${H-6}" text-anchor="middle">${lab}</text>`; });
+  xt.forEach(([t,lab])=>{ const x=X(t); if(x<padL+10||x>W-padR-10) return; svg+=`<line x1="${x}" x2="${x}" y1="${padT}" y2="${H-padB}" style="stroke:var(${"--grid"})" stroke-width="1"/><text class="ax" x="${x}" y="${H-6}" text-anchor="middle">${lab}</text>`; });
 
   // 막대 (수출·월간 막대형)
   if(isExp||isBar){
     const s=lines[0]; const n=s.pts.length; const slot=(W-padL-padR)/Math.max(n,1);
     const bw=Math.max(1,Math.min(24,slot-(slot>4?2:0))); const y0=Y(0);
     s.pts.forEach(p=>{ const x=X(toT(p[0]))-bw/2, y=Y(p[1]); const top=Math.min(y,y0), h=Math.max(1,Math.abs(y0-y));
-      svg+=`<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${bw>6?2:0}" fill="${css(isExp?"--bar":"--s1")}"${isBar?' opacity=".85"':""}/>`; });
-    svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y0}" y2="${y0}" stroke="${css("--mute")}" stroke-width="1"/>`;
-    if(avg&&avg.length) svg+=`<path d="${avg.map((p,i)=>(i?"L":"M")+X(toT(p[0])).toFixed(1)+","+Y(p[1]).toFixed(1)).join("")}" fill="none" stroke="${css("--bar2")}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      svg+=`<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${bw>6?2:0}" style="fill:var(${isExp?"--bar":"--s1"})"${isBar?' opacity=".85"':""}/>`; });
+    svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y0}" y2="${y0}" style="stroke:var(${"--mute"})" stroke-width="1"/>`;
+    if(avg&&avg.length) svg+=`<path d="${avg.map((p,i)=>(i?"L":"M")+X(toT(p[0])).toFixed(1)+","+Y(p[1]).toFixed(1)).join("")}" fill="none" style="stroke:var(${"--bar2"})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
   }else{
     // 선 (점선·계단식 먼저 → 실선을 위에)
     const order=[...lines].sort((a,b)=>(b.style.dash?1:0)-(a.style.dash?1:0));
-    const maxN=Math.round((W-padL-padR)*2);
+    const maxN=Math.round(W-padL-padR);
     order.forEach(l=>{
       const pts=l.ind.step?l.pts:thin(l.pts,maxN);
       let d="";
       pts.forEach((p,i)=>{ const x=X(toT(p[0])).toFixed(1), y=Y(p[1]).toFixed(1);
         if(!i) d+=`M${x},${y}`; else if(l.ind.step) d+=`H${x}V${y}`; else d+=`L${x},${y}`; });
       if(l.ind.step) d+=`H${X(t1).toFixed(1)}`;
-      svg+=`<path d="${d}" fill="none" stroke="${css(l.style.color)}" stroke-width="${l.style.dash?1.6:2}" ${l.style.dash?'stroke-dasharray="5 4"':""} stroke-linejoin="round" stroke-linecap="round"/>`;
+      svg+=`<path d="${d}" fill="none" style="stroke:var(${l.style.color})" stroke-width="${l.style.dash?1.6:2}" ${l.style.dash?'stroke-dasharray="5 4"':""} stroke-linejoin="round" stroke-linecap="round"/>`;
     });
     // 끝점
     order.forEach(l=>{ const p=l.pts[l.pts.length-1]; const x=l.ind.step?X(t1):X(toT(p[0]));
-      svg+=`<circle cx="${x.toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="4" fill="${css(l.style.color)}" stroke="${css("--panel")}" stroke-width="2"/>`; });
+      svg+=`<circle cx="${x.toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="4" style="fill:var(${l.style.color});stroke:var(--panel)" stroke-width="2"/>`; });
   }
   svg+=`<g class="hov"></g></svg><div class="tip"></div>`;
   el.innerHTML=svg;
@@ -463,10 +482,10 @@ function drawChart(c){
     let k=allKeys[lo2]; if(lo2>0&&Math.abs(toT(allKeys[lo2-1])-t)<Math.abs(toT(k)-t)) k=allKeys[lo2-1];
     if(!k) return;
     const xx=X(toT(k));
-    let g=`<line x1="${xx}" x2="${xx}" y1="${padT}" y2="${H-padB}" stroke="${css("--mute")}" stroke-width="1"/>`;
+    let g=`<line x1="${xx}" x2="${xx}" y1="${padT}" y2="${H-padB}" style="stroke:var(${"--mute"})" stroke-width="1"/>`;
     let rows="";
     ser.forEach(s=>{ const v=valAt(s,k); if(!v) return;
-      if(!isExp&&!isBar) g+=`<circle cx="${xx}" cy="${Y(v[1])}" r="4" fill="${css(s.color)}" stroke="${css("--panel")}" stroke-width="2"/>`;
+      if(!isExp&&!isBar) g+=`<circle cx="${xx}" cy="${Y(v[1])}" r="4" style="fill:var(${s.color});stroke:var(--panel)" stroke-width="2"/>`;
       rows+=`<div class="r"><i style="background:var(${s.color})"></i>${esc(s.lab)}<b>${fmtVal(s.ind,v[1])}</b></div>`; });
     hov.innerHTML=g;
     tip.innerHTML=`<div class="d">${fmtDate(k)}</div>${rows}`; tip.style.display="block";
@@ -474,10 +493,9 @@ function drawChart(c){
     tip.style.left=left+"px"; tip.style.top="4px";
   }
   function hide(){ tip.style.display="none"; hov.innerHTML=""; }
-  el.onpointermove=e=>show(e.clientX);
-  el.onpointerdown=e=>show(e.clientX);
-  el.onpointerleave=hide;
-  el.onpointercancel=hide;
+  el.onpointermove=e=>{ if(e.pointerType==="mouse"||e.buttons) { show(e.clientX); openTip=hide; } };
+  el.onclick=e=>{ show(e.clientX); openTip=hide; };
+  el.onpointerleave=e=>{ if(e.pointerType==="mouse") hide(); };
 }
 </script>
 </body>

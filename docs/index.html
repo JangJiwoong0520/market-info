@@ -121,7 +121,10 @@ section{padding:26px 0 6px}
 .one b.up{color:var(--up)}.one b.dn{color:var(--dn)}
 .up{color:var(--up)}.dn{color:var(--dn)}.flat{color:var(--flat)}
 .lg{display:flex;flex-wrap:wrap;gap:4px 14px;padding:9px 16px 0;font-size:12px;color:var(--sub)}
-.lg span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.lg span,.lg button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.lg button{font:inherit;color:inherit;background:none;border:1px solid transparent;border-radius:6px;padding:3px 6px;margin:-3px -6px;cursor:pointer}
+@media (hover:hover){.lg button:hover{border-color:var(--bd)}}
+.lg button.off{opacity:.38;text-decoration:line-through}
 .lg i{display:inline-block;width:14px;height:0;border-top:2.5px solid currentColor}
 .lg i.d{border-top-style:dashed;border-top-width:2px}
 .lg i.b{width:9px;height:9px;border:0;border-radius:2px}
@@ -194,6 +197,18 @@ let IO = null;                // 화면 근처 감지 (차트 지연 로드)
 // ── 즐겨찾기: 이 기기(브라우저)에만 저장 ──
 function getFav(){ try{ const v=JSON.parse(localStorage.getItem("fav")||"[]"); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
 function setFav(a){ try{ localStorage.setItem("fav",JSON.stringify(a)); }catch(e){} }
+// 카드별로 숨긴 선 (범례를 눌러 켜기/끄기)
+let HIDDEN={}; try{ HIDDEN=JSON.parse(localStorage.getItem("hiddenLines")||"{}")||{}; }catch(e){}
+function isHidden(card,id){ return (HIDDEN[card.main]||[]).includes(id); }
+function toggleLine(main,id){
+  const card=CARDMAP[main]&&CARDMAP[main].card; if(!card) return;
+  const cur=HIDDEN[main]||[];
+  let next=cur.includes(id)?cur.filter(x=>x!==id):[...cur,id];
+  if(card.lines.every(l=>next.includes(l))) return;          // 모든 선을 끌 수는 없음
+  HIDDEN[main]=next; try{ localStorage.setItem("hiddenLines",JSON.stringify(HIDDEN)); }catch(e){}
+  document.querySelectorAll(`.lg[data-card="${main}"] button`).forEach(b=>{ const off=next.includes(b.dataset.line); b.classList.toggle("off",off); b.setAttribute("aria-pressed",!off); });
+  CHARTS.filter(c=>c.card.main===main&&c.drawn).forEach(queueDraw);
+}
 
 // ── 테마 ────────────────────────────────────────────
 (function(){
@@ -210,7 +225,7 @@ function setFav(a){ try{ localStorage.setItem("fav",JSON.stringify(a)); }catch(e
 
 // ── 숫자·날짜 형식 ─────────────────────────────────
 function fmt(v,dec){ if(v==null||isNaN(v)) return "–"; return Number(v).toLocaleString("ko-KR",{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
-function fmtVal(ind,v){ const u=ind.unit; const s=fmt(v,ind.decimals); return u==="%"?s+"%":u==="억$"?s+"억$":u==="천명"?s+"천명":s; }
+function fmtVal(ind,v){ const u=ind.unit; const s=fmt(v,ind.decimals); return u==="%"?s+"%":u==="%p"?s+"%p":u==="억$"?s+"억$":u==="천명"?s+"천명":s; }
 function fmtDate(d){ if(!d) return "–"; return d.length===7? d.replace("-","."): d.slice(2).replace(/-/g,"."); }
 function dir(x){ return x==null?"flat": x>0?"up": x<0?"dn":"flat"; }
 function arrow(x){ return x>0?"▲":x<0?"▼":"–"; }
@@ -278,6 +293,8 @@ function render(){
   renderFav();
   // 별(☆) 누르기 — 원래 카드·즐겨찾기 카드 어디서든
   main.addEventListener("click",e=>{
+    const lb=e.target.closest(".lg button[data-line]");
+    if(lb){ toggleLine(lb.closest(".lg").dataset.card,lb.dataset.line); return; }
     const b=e.target.closest(".star"); if(!b) return;
     const id=b.dataset.fav; let f=getFav();
     f=f.includes(id)?f.filter(x=>x!==id):[...f,id];
@@ -350,7 +367,7 @@ function cardHTML(card,s,pre=""){
   const st=lineStyle(card);
   let lg="";
   if(s.type==="exports") lg=`<div class="lg"><span><i class="b" style="background:var(--bar)"></i>월 수출</span><span><i style="color:var(--bar2)"></i>12개월 평균</span></div>`;
-  else if(multi) lg=`<div class="lg">${card.lines.map(id=>`<span><i class="${st[id].dash?"d":""}" style="color:var(${st[id].color})"></i>${esc(I[id].short)} <b>${fmtVal(I[id],(I[id].summary||{}).value)}</b></span>`).join("")}</div>`;
+  else if(multi) lg=`<div class="lg" data-card="${card.main}">${card.lines.map(id=>{ const off=isHidden(card,id); return `<button type="button" data-line="${id}" class="${off?"off":""}" aria-pressed="${!off}" title="눌러서 선 켜기/끄기"><i class="${st[id].dash?"d":""}" style="color:var(${st[id].color})"></i>${esc(I[id].short)} <b>${fmtVal(I[id],(I[id].summary||{}).value)}</b></button>`; }).join("")}</div>`;
   const src=I[card.main].source;
   const fav=getFav().includes(card.main);
   return `<article class="card" id="${pre}c-${card.main}">
@@ -502,7 +519,7 @@ function drawChart(c){
   // 기간 기준: 카드 안 시리즈 중 가장 늦은 날짜
   const lastKey=card.lines.map(id=>(SERIES[id]||[]).slice(-1)[0]?.[0]||"").sort().pop();
   const sk=startKey(PERIOD[section.id],lastKey);
-  const lines=card.lines.map(id=>{
+  const lines=card.lines.filter(id=>!isHidden(card,id)).map(id=>{
     const all=SERIES[id]||[]; const ind=I[id];
     let pts=all.filter(p=>p[0]>=sk);
     if(ind.step){   // 계단식: 시작 직전 값으로 시작점 채움
@@ -535,6 +552,7 @@ function drawChart(c){
 
   let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(card.title||I[card.main].name)} 차트">`;
   ticks.forEach(v=>{ const y=Y(v); svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y}" y2="${y}" style="stroke:var(${"--grid"})" stroke-width="1"/><text class="ax" x="${W-padR+6}" y="${y+3.5}">${tickLab(v)}</text>`; });
+  if(card.zero&&lo<0&&hi>0){ const y0=Y(0); svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y0}" y2="${y0}" style="stroke:var(--mute)" stroke-width="1"/><text class="ax" x="${W-padR-4}" y="${y0+13}" text-anchor="end">0 아래 = 역전</text>`; }
   // x축 눈금
   const spanY=(t1-tmin)/(365.25*864e5);
   const xt=[]; const sy=new Date(tmin).getUTCFullYear(), ey=new Date(t1).getUTCFullYear();

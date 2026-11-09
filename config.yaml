@@ -45,6 +45,7 @@ indicators:
   - { id: us2y,  name: 美국채 2년,  short: 2년,  source: fred, series: DGS2,  unit: "%", kind: rate, decimals: 2 }
   - { id: us10y, name: 美국채 10년, short: 10년, source: fred, series: DGS10, unit: "%", kind: rate, decimals: 2 }
   - { id: us30y, name: 美국채 30년, short: 30년, source: fred, series: DGS30, unit: "%", kind: rate, decimals: 2 }
+  - { id: us_t10y2y, name: 美 장단기 금리차 (10년−2년), short: 美 10Y−2Y, source: derived, formula: [us10y, "-", us2y], source_name: "FRED(연준) 계산", unit: "%p", kind: rate, decimals: 2 }
 
   # 브라질 금리
   - { id: br_selic, name: 브라질 Selic 기준금리, short: Selic 기준금리, source: bcb, sgs: 432, unit: "%", kind: rate, decimals: 2, step: true }
@@ -55,6 +56,7 @@ indicators:
   - { id: jpykrw, name: 원/100엔, source: ecos, stat: 731Y001, item: "0000002", cycle: D, unit: 원, kind: level, decimals: 2 }
   - { id: usdbrl, name: 달러/헤알, source: bcb, sgs: 1, unit: 헤알, kind: level, decimals: 4, hidden: true }   # 원/헤알 계산용
   - { id: brlkrw, name: 원/헤알, source: derived, formula: [usdkrw, "/", usdbrl], unit: 원, kind: level, decimals: 2 }
+  - { id: dxy,    name: 달러인덱스 (DXY), short: DXY, source: yahoo, symbol: "DX-Y.NYB", unit: pt, kind: level, decimals: 2, public: true }
 
   # 주식·원자재·코인
   - { id: kospi,  name: 코스피, source: ecos, stat: 802Y001, item: "0001000", cycle: D, unit: pt, kind: level, decimals: 2 }
@@ -94,10 +96,11 @@ sections:
   - id: rates
     label: 금리
     eyebrow: RATES
-    note: 국채 금리 / 점선 기준금리
+    note: 국채 금리 / 점선 기준금리 · 범례를 누르면 선 켜기·끄기
     cards:
       - { title: 한국 국고채, main: kr10y, lines: [kr_base, kr3y, kr10y, kr30y], dashed: [kr_base] }
       - { title: 미국 국채,   main: us10y, lines: [us_fed, us2y, us10y, us30y], dashed: [us_fed] }
+      - { main: us_t10y2y, zero: true }
       - { title: 브라질 국채, main: br10y, lines: [br_selic, br10y], dashed: [br_selic] }
   - id: fx
     label: 환율
@@ -107,6 +110,7 @@ sections:
       - { main: usdkrw }
       - { main: jpykrw }
       - { main: brlkrw }
+      - { main: dxy }
   - id: assets
     label: 주식·원자재·코인
     eyebrow: EQUITY · COMMODITY · CRYPTO

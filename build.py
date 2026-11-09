@@ -150,7 +150,8 @@ def collect_derived(ind: dict, cfg: dict, objs: dict) -> tuple[dict, str | None]
     a_id, op, b_id = ind["formula"]
     a, b = objs.get(a_id), objs.get(b_id)
     src = cfg["sources"]["derived"]
-    base = {"id": ind["id"], "name": ind["name"], "unit": ind.get("unit", ""), "source": src["name"], "source_url": ""}
+    base = {"id": ind["id"], "name": ind["name"], "unit": ind.get("unit", ""),
+            "source": ind.get("source_name", src["name"]), "source_url": ""}
     if not a or not b or not a["series"] or not b["series"]:
         old = read_json(ind["id"])
         return (old or {**base, "as_of": None, "status": "failed", "series": []}), f"계산 재료 없음 ({a_id}, {b_id})"
@@ -160,8 +161,8 @@ def collect_derived(ind: dict, cfg: dict, objs: dict) -> tuple[dict, str | None]
         while j < len(bs) and bs[j][0] <= k:
             last_b = bs[j]
             j += 1
-        if last_b and (parse_date(k) - parse_date(last_b[0])).days <= 5 and last_b[1]:
-            val = v / last_b[1] if op == "/" else v * last_b[1]
+        if last_b and (parse_date(k) - parse_date(last_b[0])).days <= 5 and (last_b[1] or op != "/"):
+            val = {"/": lambda x, y: x / y, "*": lambda x, y: x * y, "-": lambda x, y: x - y}[op](v, last_b[1])
             out.append([k, round(val, 4)])
     obj = {**base, "as_of": out[-1][0] if out else None, "updated_at": now_kst(),
            "status": "ok" if a["status"] == b["status"] == "ok" else "stale", "series": out}

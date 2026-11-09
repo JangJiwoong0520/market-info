@@ -4,6 +4,8 @@
 !.env.example
 
 # ── 로컬 데이터·DB·내보내기 ──
+# 내 PC 전용 보기(local_view.py) 결과 — ForexFactory 자료는 절대 공개 저장소에 올리지 않는다
+docs/local/
 # (루트의 data/만 제외. 공개용 데이터는 docs/data/ 에 두고 커밋한다)
 /data/
 *.db

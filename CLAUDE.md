@@ -103,6 +103,12 @@ market-info/
 - [ ] GitHub Actions 수동 실행(workflow_dispatch) 성공, Pages 주소에서 최신 데이터 확인
 - [ ] 다음 날 자동 실행 후 기준일이 바뀐 것 확인
 
+### 컨센서스(예상치) 정책
+- ForexFactory는 일정표 재게시·재배포를 금지 → **공개 페이지·공개 저장소에는 절대 넣지 않는다.**
+- 개인 이용만: `local_view.py`가 사용자 PC에서 ForexFactory 이번 주 내보내기 파일을 받아 `docs/local/`(gitignore)에 저장하고,
+  127.0.0.1에서만 대시보드를 연다. 페이지는 localhost일 때만 `local/calendar_local.json`을 읽는다.
+- 공개 페이지의 '예상' 칸은 `config.yaml`의 `calendar_consensus`(공개 가능한 출처만) 직접 입력.
+
 ## 2-3. 공모주 캘린더 · 상장 후 트래킹
 
 ### 기능

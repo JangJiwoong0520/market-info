@@ -158,6 +158,9 @@ section{padding:26px 0 6px}
 .cal th.n{text-align:right}
 @media (max-width:420px){.cal td,.cal th{padding:8px 6px}.cal td.n{width:62px;font-size:12.5px}.cal td.i{width:34px}}
 .cal .calnote{padding:9px 12px;font-size:11.5px;color:var(--mute);border-top:1px solid var(--bd2)}
+.cal .calnote.loc{background:var(--warn-bg);color:var(--warn-tx)}
+.cal td.n .fl{display:block}.cal td.n .fl+.fl{margin-top:4px}
+.cal .ffx{font-size:10px;color:var(--mute);border:1px solid var(--bd);border-radius:3px;padding:0 3px;font-weight:400}
 .empty{padding:22px 16px;color:var(--mute);font-size:13px;text-align:center}
 
 footer{margin:30px 0 0;padding:20px 0 40px;border-top:1px solid var(--bd);color:var(--sub);font-size:12px;line-height:1.7}
@@ -184,7 +187,9 @@ footer .disc{margin-top:8px;color:var(--tx);font-weight:600}
 
 <script>
 "use strict";
-const DATA = "data/";
+// 내 PC 전용 보기(local_view.py)로 열면: 데이터는 공개 페이지의 최신본을 쓰고, 컨센서스는 PC의 docs/local/에서 읽는다
+const LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+const DATA = LOCAL ? "https://jangjiwoong0520.github.io/market-info/data/" : "data/";
 let M = null;                 // manifest
 const SERIES = {};            // id → [[date, value], ...]
 const LOADING = {};
@@ -301,6 +306,7 @@ function render(){
     setFav(f); renderFav();
   });
   setupSubNav();
+  if(LOCAL) loadLocalCalendar();
 
   // 메뉴 강조
   const links=[...document.querySelectorAll("#nav .tab")];
@@ -429,24 +435,39 @@ function setupSubNav(){
   document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&subOpen) closeSub(); });
 }
 
-function calendarHTML(){
-  const rows=M.calendar||[];
+// ── 내 PC 전용: ForexFactory 컨센서스가 붙은 일정 (공개 페이지에서는 실행 안 됨) ──
+function loadLocalCalendar(){
+  fetch("local/calendar_local.json",{cache:"no-cache"}).then(r=>r.ok?r.json():null).then(j=>{
+    if(!j||!j.events) return;
+    const box=document.querySelector("#calendar .cal"); if(!box) return;
+    box.outerHTML=calendarHTML(j.events,j);
+  }).catch(()=>{});
+}
+
+function calendarHTML(rowsIn,local){
+  const rows=rowsIn||M.calendar||[];
   if(!rows.length) return `<div class="cal"><div class="empty">앞으로 3주 안에 등록된 일정이 없습니다.</div></div>`;
   const todayK=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
   const W="일월화수목금토";
-  const hasCons=rows.some(r=>r.consensus);
+  const hasCons=rows.some(r=>r.consensus||(r.ff&&r.ff.some(f=>f.fc)));
   let html=`<div class="cal"><table><thead><tr><th>시간</th><th>일정</th><th>중요</th><th class="n">이전</th><th class="n">예상</th></tr></thead><tbody>`, last="";
   rows.forEach(r=>{
     if(r.date!==last){ const d=new Date(r.date+"T00:00:00"); html+=`<tr class="day"><td colspan="5">${r.date.slice(5).replace("-",".")} (${W[d.getDay()]})${r.date===todayK?" · 오늘":""}</td></tr>`; last=r.date; }
     const C={US:"미국",KR:"한국",BR:"브라질"};
     const imp=Math.max(1,Math.min(3,r.importance||1));
     html+=`<tr><td class="t">${esc(r.time||(r.country==="BR"?"현지":""))}</td>`+
-      `<td class="e${imp>=3?" hi":""}"><span class="cty">${esc(C[r.country]||r.country||"")}</span>${esc(r.event)}</td>`+
+      `<td class="e${imp>=3?" hi":""}"><span class="cty">${esc(C[r.country]||r.country||"")}</span>${esc(r.event)}${r.extra?' <small class="ffx">FF</small>':""}</td>`+
       `<td class="i" aria-label="중요도 ${imp} / 3">${"●".repeat(imp)}<span class="o">${"●".repeat(3-imp)}</span></td>`+
-      `<td class="n">${r.prev?esc(r.prev)+(r.prev_label?`<small>${esc(r.prev_label)}</small>`:""):"–"}</td>`+
-      `<td class="n">${r.consensus?esc(r.consensus):"–"}</td></tr>`;
+      (r.ff&&r.ff.length
+        ? `<td class="n">${r.ff.map(f=>`<span class="fl">${esc(f.prev||"–")}${f.name?`<small>${esc(f.name)}</small>`:""}</span>`).join("")}</td>`+
+          `<td class="n">${r.ff.map(f=>`<span class="fl">${esc(f.fc||"–")}${f.name?`<small>&nbsp;</small>`:""}</span>`).join("")}</td></tr>`
+        : `<td class="n">${r.prev?esc(r.prev)+(r.prev_label?`<small>${esc(r.prev_label)}</small>`:""):"–"}</td>`+
+          `<td class="n">${r.consensus?esc(r.consensus):"–"}</td></tr>`);
   });
-  return html+`</tbody></table><div class="calnote">이전 = 가장 최근 발표치(이 페이지 수집 데이터) · 예상 = 시장 컨센서스${hasCons?"":"(아직 입력 없음)"}</div></div>`;
+  const note=local
+    ? `🔒 <b>내 PC 전용 보기</b> · 이전·예상: ForexFactory 이번 주 일정(${esc(local.updated_at)} 받음, 개인 이용 — 공개·고객 자료로 옮기지 마세요) · 그 외 이전 = 이 페이지 데이터`
+    : `이전 = 가장 최근 발표치(이 페이지 수집 데이터) · 예상 = 시장 컨센서스${hasCons?"":"(아직 입력 없음)"}`;
+  return html+`</tbody></table><div class="calnote${local?" loc":""}">${note}</div></div>`;
 }
 
 function renderFooter(){

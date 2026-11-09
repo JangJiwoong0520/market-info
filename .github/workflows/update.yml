@@ -1,0 +1,65 @@
+name: 데이터 업데이트
+
+on:
+  schedule:
+    # cron은 UTC 기준 (한국시간 = UTC + 9)
+    - cron: "30 22 * * 0-4"   # 한국시간 평일(월~금) 07:30
+    - cron: "30 7 * * 1-5"    # 한국시간 평일(월~금) 16:30
+  workflow_dispatch:           # Actions 화면에서 수동 실행
+    inputs:
+      full:
+        description: "처음부터 전부 다시 받기"
+        type: boolean
+        default: false
+      only:
+        description: "일부 지표만 (쉼표 구분 id, 비우면 전체)"
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 데이터 수집
+        env:
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          DATA_GO_KR_API_KEY: ${{ secrets.DATA_GO_KR_API_KEY }}
+          IN_FULL: ${{ inputs.full }}
+          IN_ONLY: ${{ inputs.only }}
+        run: |
+          ARGS=()
+          if [ "$IN_FULL" = "true" ]; then ARGS+=(--full); fi
+          if [ -n "$IN_ONLY" ]; then ARGS+=(--only "$IN_ONLY"); fi
+          python build.py "${ARGS[@]}"
+
+      - name: 변경된 데이터 저장
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data
+          if git diff --cached --quiet; then
+            echo "변경 없음"
+          else
+            git commit -m "데이터 업데이트 $(TZ=Asia/Seoul date +'%Y-%m-%d %H:%M') KST"
+            git pull --rebase origin main
+            git push
+          fi

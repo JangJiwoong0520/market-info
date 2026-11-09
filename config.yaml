@@ -1,0 +1,163 @@
+# ─────────────────────────────────────────────────────────────
+# market-info 설정 파일
+# 지표를 추가·삭제·숨기려면 이 파일만 고치면 된다. (코드 수정 불필요)
+#
+#  public: false  → 공개 페이지·JSON에서 제외 (수집도 안 함)
+#  kind: rate     → 변화량을 bp로 표시 (금리)
+#  kind: level    → 변화율을 %로 표시 (지수·환율·가격)
+#  kind: macro    → 월간 발표치, "이전 값"과 비교
+#  step: true     → 기준금리처럼 계단식 (값이 바뀐 날만 저장)
+# ─────────────────────────────────────────────────────────────
+
+site:
+  title: Market Monitor
+  subtitle: 금리 · 환율 · 자산 · 경제지표 · 수출
+  disclaimer: 본 페이지의 정보는 참고용이며, 투자 판단의 책임은 투자자 본인에게 있습니다.
+
+# 최초 수집 시작일 (20년 차트용으로 넉넉하게)
+history_start: "2000-01-01"
+
+# 상단 요약 띠에 보일 지표 (순서대로)
+ticker: [kospi, kosdaq, spx, nasdaq, usdkrw, jpykrw, kr10y, us10y, wti, gold, btc]
+
+# 기간 버튼
+periods: ["1Y", "3Y", "5Y", "10Y", "20Y", "YTD"]
+
+sources:
+  ecos:    { name: 한국은행, url: "https://ecos.bok.or.kr" }
+  fred:    { name: FRED, url: "https://fred.stlouisfed.org" }
+  yahoo:   { name: Yahoo Finance, url: "https://finance.yahoo.com" }
+  bcb:     { name: 브라질 중앙은행, url: "https://www.bcb.gov.br" }
+  tesouro: { name: 브라질 국고청, url: "https://www.tesourotransparente.gov.br" }
+  customs: { name: 관세청, url: "https://www.data.go.kr/data/15101609/openapi.do" }
+  derived: { name: 한국은행·브라질 중앙은행, url: "" }
+
+# ── 지표 목록 ──────────────────────────────────────────────
+indicators:
+  # 한국 금리 (ECOS)
+  - { id: kr_base, name: 한국은행 기준금리, short: 기준금리, source: ecos, stat: 722Y001, item: "0101000", cycle: D, unit: "%", kind: rate, decimals: 2, step: true }
+  - { id: kr3y,  name: 국고채 3년,  short: 3년,  source: ecos, stat: 817Y002, item: "010200000", cycle: D, unit: "%", kind: rate, decimals: 3 }
+  - { id: kr10y, name: 국고채 10년, short: 10년, source: ecos, stat: 817Y002, item: "010210000", cycle: D, unit: "%", kind: rate, decimals: 3 }
+  - { id: kr30y, name: 국고채 30년, short: 30년, source: ecos, stat: 817Y002, item: "010230000", cycle: D, unit: "%", kind: rate, decimals: 3 }
+
+  # 미국 금리 (FRED)
+  - { id: us_fed, name: 美 기준금리(상단), short: 기준금리(상단), source: fred, series: DFEDTARU, unit: "%", kind: rate, decimals: 2, step: true }
+  - { id: us2y,  name: 美국채 2년,  short: 2년,  source: fred, series: DGS2,  unit: "%", kind: rate, decimals: 2 }
+  - { id: us10y, name: 美국채 10년, short: 10년, source: fred, series: DGS10, unit: "%", kind: rate, decimals: 2 }
+  - { id: us30y, name: 美국채 30년, short: 30년, source: fred, series: DGS30, unit: "%", kind: rate, decimals: 2 }
+
+  # 브라질 금리
+  - { id: br_selic, name: 브라질 Selic 기준금리, short: Selic 기준금리, source: bcb, sgs: 432, unit: "%", kind: rate, decimals: 2, step: true }
+  - { id: br10y, name: 브라질 국채 10년(근사), short: 10년 근사(NTN-F), source: tesouro, title_type: "Tesouro Prefixado com Juros Semestrais", target_years: 10, unit: "%", kind: rate, decimals: 2 }
+
+  # 환율
+  - { id: usdkrw, name: 원/달러, source: ecos, stat: 731Y001, item: "0000001", cycle: D, unit: 원, kind: level, decimals: 1 }
+  - { id: jpykrw, name: 원/100엔, source: ecos, stat: 731Y001, item: "0000002", cycle: D, unit: 원, kind: level, decimals: 2 }
+  - { id: usdbrl, name: 달러/헤알, source: bcb, sgs: 1, unit: 헤알, kind: level, decimals: 4, hidden: true }   # 원/헤알 계산용
+  - { id: brlkrw, name: 원/헤알, source: derived, formula: [usdkrw, "/", usdbrl], unit: 원, kind: level, decimals: 2 }
+
+  # 주식·원자재·코인
+  - { id: kospi,  name: 코스피, source: ecos, stat: 802Y001, item: "0001000", cycle: D, unit: pt, kind: level, decimals: 2 }
+  - { id: kosdaq, name: 코스닥, source: ecos, stat: 802Y001, item: "0089000", cycle: D, unit: pt, kind: level, decimals: 2 }
+  - { id: spx,    name: S&P 500,    source: yahoo, symbol: "^GSPC",  unit: pt, kind: level, decimals: 2, public: true }
+  - { id: nasdaq, name: 나스닥 종합, source: yahoo, symbol: "^IXIC",  unit: pt, kind: level, decimals: 2, public: true }
+  - { id: wti,    name: WTI 유가 ($/배럴), short: WTI, source: fred, series: DCOILWTICO, unit: "$", kind: level, decimals: 2 }
+  - { id: gold,   name: 금 ($/온스, 선물), short: 금, source: yahoo, symbol: "GC=F", unit: "$", kind: level, decimals: 1, public: true }
+  - { id: btc,    name: 비트코인 ($), short: 비트코인, source: yahoo, symbol: "BTC-USD", unit: "$", kind: level, decimals: 0, public: true }
+
+  # 경제지표 (월간)
+  - { id: us_cpi,      name: 美 소비자물가 (전년비), short: CPI, source: fred, series: CPIAUCSL, units: pc1, cycle: M, unit: "%", kind: macro, decimals: 1 }
+  - { id: us_core_cpi, name: 美 근원 소비자물가 (전년비), short: 근원 CPI, source: fred, series: CPILFESL, units: pc1, cycle: M, unit: "%", kind: macro, decimals: 1 }
+  - { id: us_ppi,      name: 美 생산자물가 (전년비), source: fred, series: PPIFIS, units: pc1, cycle: M, unit: "%", kind: macro, decimals: 1 }
+  - { id: us_core_pce, name: 美 근원 PCE 물가 (전년비), source: fred, series: PCEPILFE, units: pc1, cycle: M, unit: "%", kind: macro, decimals: 1 }
+  - { id: us_nfp,      name: 美 비농업 고용 (전월대비), source: fred, series: PAYEMS, units: chg, cycle: M, unit: 천명, kind: macro, decimals: 0 }
+  - { id: us_unrate,   name: 美 실업률, source: fred, series: UNRATE, cycle: M, unit: "%", kind: macro, decimals: 1 }
+  - { id: us_retail,   name: 美 소매판매 (전월비), source: fred, series: RSAFS, units: pch, cycle: M, unit: "%", kind: macro, decimals: 1 }
+  - { id: kr_cpi,      name: 韓 소비자물가 (전년비), source: ecos, stat: 901Y009, item: "0", cycle: M, transform: yoy, unit: "%", kind: macro, decimals: 1 }
+  - { id: br_ipca,     name: 브라질 IPCA (12개월 누적), source: bcb, sgs: 13522, cycle: M, unit: "%", kind: macro, decimals: 1 }
+
+  # 품목별 수출 (관세청, HS 4단위, 억 달러)
+  - { id: exp_8542, name: 반도체,     hs: "8542", source: customs, cycle: M, unit: 억$, kind: export, decimals: 1 }
+  - { id: exp_8703, name: 자동차,     hs: "8703", source: customs, cycle: M, unit: 억$, kind: export, decimals: 1 }
+  - { id: exp_2710, name: 석유제품,   hs: "2710", source: customs, cycle: M, unit: 억$, kind: export, decimals: 1 }
+  - { id: exp_8901, name: 선박,       hs: "8901", source: customs, cycle: M, unit: 억$, kind: export, decimals: 1 }
+  - { id: exp_8708, name: 자동차부품, hs: "8708", source: customs, cycle: M, unit: 억$, kind: export, decimals: 1 }
+  - { id: exp_8524, name: 디스플레이, hs: "8524", source: customs, cycle: M, unit: 억$, kind: export, decimals: 1 }
+  - { id: exp_8517, name: 무선통신기기, hs: "8517", source: customs, cycle: M, unit: 억$, kind: export, decimals: 1 }
+  - { id: exp_8507, name: 이차전지,   hs: "8507", source: customs, cycle: M, unit: 억$, kind: export, decimals: 1 }
+  - { id: exp_3304, name: 화장품,     hs: "3304", source: customs, cycle: M, unit: 억$, kind: export, decimals: 1 }
+  - { id: exp_8471, name: 컴퓨터·SSD, hs: "8471", source: customs, cycle: M, unit: 억$, kind: export, decimals: 1 }
+
+# ── 화면 구성 (섹션 → 카드 → 선) ─────────────────────────────
+sections:
+  - id: rates
+    label: 금리
+    eyebrow: RATES
+    note: 국채 금리 / 점선 기준금리
+    cards:
+      - { title: 한국 국고채, main: kr10y, lines: [kr_base, kr3y, kr10y, kr30y], dashed: [kr_base] }
+      - { title: 미국 국채,   main: us10y, lines: [us_fed, us2y, us10y, us30y], dashed: [us_fed] }
+      - { title: 브라질 국채, main: br10y, lines: [br_selic, br10y], dashed: [br_selic] }
+  - id: fx
+    label: 환율
+    eyebrow: FX
+    note: 원화 기준 / 원·헤알 = 원·달러 ÷ 달러·헤알
+    cards:
+      - { main: usdkrw }
+      - { main: jpykrw }
+      - { main: brlkrw }
+  - id: assets
+    label: 주식·원자재·코인
+    eyebrow: EQUITY · COMMODITY · CRYPTO
+    note: 종가 기준
+    cards:
+      - { main: kospi }
+      - { main: kosdaq }
+      - { main: spx }
+      - { main: nasdaq }
+      - { main: wti }
+      - { main: gold }
+      - { main: btc }
+  - id: calendar
+    label: 주요 일정
+    eyebrow: CALENDAR
+    note: 한국시간 기준 (수동 입력)
+    type: calendar
+  - id: macro
+    label: 경제지표
+    eyebrow: MACRO
+    note: 월간 발표치
+    periods: ["1Y", "3Y", "5Y", "10Y", "20Y"]
+    cards:
+      - { title: 美 소비자물가 (전년비), main: us_cpi, lines: [us_cpi, us_core_cpi] }
+      - { main: us_ppi }
+      - { main: us_core_pce }
+      - { main: us_nfp, chart: bar }
+      - { main: us_unrate }
+      - { main: us_retail, chart: bar }
+      - { main: kr_cpi }
+      - { main: br_ipca }
+  - id: exports
+    label: 품목별 수출
+    eyebrow: EXPORTS
+    note: 관세청 HS 4단위, 억 달러 / 막대 월별 · 선 12개월 평균
+    periods: ["3Y", "5Y", "10Y", "20Y"]
+    type: exports
+    cards:
+      - { main: exp_8542 }
+      - { main: exp_8703 }
+      - { main: exp_2710 }
+      - { main: exp_8901 }
+      - { main: exp_8708 }
+      - { main: exp_8524 }
+      - { main: exp_8517 }
+      - { main: exp_8507 }
+      - { main: exp_3304 }
+      - { main: exp_8471 }
+
+# ── 주요 일정 (수동 입력) ────────────────────────────────────
+# 형식: { date: "YYYY-MM-DD", time: "HH:MM"(한국시간), country: US/KR/BR, event: 지표명, importance: 1~3 }
+# 지난 일정은 자동으로 숨겨지고, 오늘부터 3주 이내만 표시된다.
+# 예) - { date: "2026-12-01", time: "10:00", country: KR, event: 한은 금통위 기준금리 결정, importance: 3 }
+# ※ 일정은 각 기관 공식 발표 일정(BLS, BEA, 한국은행 등)에서 확인 후 입력한다.
+calendar: []

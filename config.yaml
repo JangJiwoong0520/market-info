@@ -121,7 +121,7 @@ sections:
   - id: calendar
     label: 주요 일정
     eyebrow: CALENDAR
-    note: 한국시간 기준 · 美 지표 발표일은 FRED, Copom은 브라질 중앙은행 공식 달력
+    note: 한국시간 · 출처 FRED·각국 중앙은행
     type: calendar
   - id: macro
     label: 경제지표

@@ -129,11 +129,11 @@ section{padding:26px 0 6px}
 
 /* 일정 */
 .cal{background:var(--panel);border:1px solid var(--bd);border-radius:10px;overflow:auto}
-.cal table{width:100%;border-collapse:collapse;font-size:13px;min-width:460px}
+.cal table{width:100%;border-collapse:collapse;font-size:13px}
 .cal th{font-size:11.5px;color:var(--mute);font-weight:600;text-align:left;padding:9px 12px;border-bottom:1px solid var(--bd)}
 .cal td{padding:9px 12px;border-bottom:1px solid var(--bd2)}
 .cal tr.day td{background:var(--bd2);font-weight:700;font-size:12.5px;padding:6px 12px}
-.cal .imp{letter-spacing:1px;color:var(--acc)}
+.cal td.t{width:64px;white-space:nowrap;color:var(--sub)}.cal td.c{width:52px;white-space:nowrap;color:var(--sub)}.cal td.hi{font-weight:700}
 .empty{padding:22px 16px;color:var(--mute);font-size:13px;text-align:center}
 
 footer{margin:30px 0 0;padding:20px 0 40px;border-top:1px solid var(--bd);color:var(--sub);font-size:12px;line-height:1.7}
@@ -325,11 +325,11 @@ function calendarHTML(){
   if(!rows.length) return `<div class="cal"><div class="empty">앞으로 3주 안에 등록된 일정이 없습니다.</div></div>`;
   const todayK=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
   const W="일월화수목금토";
-  let html=`<div class="cal"><table><thead><tr><th>시간(KST)</th><th>국가</th><th>일정</th><th>중요도</th></tr></thead><tbody>`, last="";
+  let html=`<div class="cal"><table><thead><tr><th>시간</th><th>국가</th><th>일정 (굵은 글씨 = 주요)</th></tr></thead><tbody>`, last="";
   rows.forEach(r=>{
-    if(r.date!==last){ const d=new Date(r.date+"T00:00:00"); html+=`<tr class="day"><td colspan="4">${r.date.slice(5).replace("-",".")} (${W[d.getDay()]})${r.date===todayK?" · 오늘":""}</td></tr>`; last=r.date; }
+    if(r.date!==last){ const d=new Date(r.date+"T00:00:00"); html+=`<tr class="day"><td colspan="3">${r.date.slice(5).replace("-",".")} (${W[d.getDay()]})${r.date===todayK?" · 오늘":""}</td></tr>`; last=r.date; }
     const C={US:"미국",KR:"한국",BR:"브라질"};
-    html+=`<tr><td>${esc(r.time||(r.country==="BR"?"현지":""))}</td><td>${esc(C[r.country]||r.country||"")}</td><td>${esc(r.event)}</td><td class="imp" aria-label="중요도 ${r.importance||1}">${"●".repeat(r.importance||1)}</td></tr>`;
+    html+=`<tr><td class="t">${esc(r.time||(r.country==="BR"?"현지":""))}</td><td class="c">${esc(C[r.country]||r.country||"")}</td><td class="${(r.importance||1)>=3?"hi":""}">${esc(r.event)}</td></tr>`;
   });
   return html+`</tbody></table></div>`;
 }

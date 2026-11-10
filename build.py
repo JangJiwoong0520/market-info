@@ -113,6 +113,24 @@ def compress_steps(series: list[list]) -> list[list]:
     return out
 
 
+def fill_latest(ind: dict, new: list[list], start: date) -> list[list]:
+    """원 출처가 하루 늦게 올리는 지표(ECOS 코스피 등)의 빈 최근일을 Yahoo 값으로 잠정 채움.
+    다음 실행에서 원 출처 값이 들어오면 그 값으로 덮어쓴다. 실패해도 원 출처 값은 그대로."""
+    sym = ind.get("latest_from")
+    if not sym:
+        return []
+    try:
+        y = yahoo.fetch({"symbol": sym}, max(start, today_kst() - timedelta(days=10)), today_kst())
+    except Exception as e:  # noqa: BLE001
+        log.warning("  ✗ %s 최근일 보충 실패: %s", ind["id"], mask(str(e))[:120])
+        return []
+    last = new[-1][0] if new else ""
+    out = [r for r in y if r[0] > last]
+    if out:
+        log.info("  + 최근일 Yahoo 잠정값: %s", ", ".join(r[0] for r in out))
+    return out
+
+
 # ── 지표 1개 수집 ─────────────────────────────────────────
 def collect_one(ind: dict, cfg: dict, full: bool) -> tuple[dict, str | None]:
     old = read_json(ind["id"])
@@ -131,11 +149,16 @@ def collect_one(ind: dict, cfg: dict, full: bool) -> tuple[dict, str | None]:
         incremental = old and not full and (ind.get("cycle") not in ("M", "Q") or ind["source"] == "customs")
         keep_old = old["series"] if incremental else []
         series = merge(keep_old, new)
+        filled = fill_latest(ind, new, start)
+        if filled:
+            series = merge(series, filled)
         series = [s for s in series if s[0] >= cfg["history_start"][: len(s[0])]]
         nd = ind.get("decimals", 2) + 2
         series = [[k, round(v, nd)] for k, v in series]
         if ind.get("step"):
             series = compress_steps(series)
+        if filled and series[-1][0] == filled[-1][0]:
+            base["source"] += " (최근일 Yahoo 잠정)"
         obj = {**base, "as_of": series[-1][0], "updated_at": now_kst(), "status": "ok", "series": series}
         write_json(ind["id"], obj)
         return obj, None

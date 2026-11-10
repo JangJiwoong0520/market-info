@@ -68,8 +68,8 @@ indicators:
   - { id: dxy,    name: 달러인덱스 (DXY), short: DXY, source: yahoo, symbol: "DX-Y.NYB", unit: pt, kind: level, decimals: 2, public: true, intraday: "DX-Y.NYB" }
 
   # 주식·원자재·코인
-  - { id: kospi,  name: 코스피, source: ecos, stat: 802Y001, item: "0001000", cycle: D, unit: pt, kind: level, decimals: 2, intraday: "^KS11" }
-  - { id: kosdaq, name: 코스닥, source: ecos, stat: 802Y001, item: "0089000", cycle: D, unit: pt, kind: level, decimals: 2, intraday: "^KQ11" }
+  - { id: kospi,  name: 코스피, source: ecos, stat: 802Y001, item: "0001000", cycle: D, unit: pt, kind: level, decimals: 2, intraday: "^KS11", latest_from: "^KS11" }   # ECOS는 하루 늦게 올라옴 → 당일 종가는 Yahoo로 잠정 채움
+  - { id: kosdaq, name: 코스닥, source: ecos, stat: 802Y001, item: "0089000", cycle: D, unit: pt, kind: level, decimals: 2, intraday: "^KQ11", latest_from: "^KQ11" }
   - { id: spx,    name: S&P 500,    source: yahoo, symbol: "^GSPC",  unit: pt, kind: level, decimals: 2, public: true, intraday: "^GSPC" }
   - { id: nasdaq, name: 나스닥 종합, source: yahoo, symbol: "^IXIC",  unit: pt, kind: level, decimals: 2, public: true, intraday: "^IXIC" }
   - { id: wti,    name: "WTI 유가 ($/배럴, 선물)", short: WTI, source: yahoo, symbol: "CL=F", unit: "$", kind: level, decimals: 2, public: true, intraday: "CL=F" }   # FRED(EIA 현물)는 약 1주 지연

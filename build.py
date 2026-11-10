@@ -227,7 +227,27 @@ def summarize(ind: dict, obj: dict) -> dict:
     elif kind == "export":
         ly = dict(s).get(f"{int(k[:4]) - 1}{k[4:]}")
         out["yoy"] = round((v / ly - 1) * 100, 1) if ly else None
+    out["spark"] = spark(ind, s)
     return out
+
+
+def spark(ind: dict, s: list[list], n: int = 32) -> list:
+    """즐겨찾기 표의 작은 추이선용: 일별은 최근 1달, 월간은 최근 2년 (최대 n개 값)."""
+    if len(s[-1][0]) == 7:                                   # 월간
+        vals = [x[1] for x in s[-24:]]
+    else:
+        cut = (parse_date(s[-1][0]) - timedelta(days=31)).isoformat()
+        pts = [x for x in s if x[0] >= cut]
+        if ind.get("step"):                                  # 계단식: 시작 시점 값 + 마지막 값
+            before = value_at_or_before(s, cut)
+            pts = ([before] if before else []) + pts
+        vals = [x[1] for x in pts]
+    if len(vals) > n:
+        step = len(vals) / n
+        vals = [vals[min(len(vals) - 1, round(i * step))] for i in range(n - 1)] + [vals[-1]]
+    if len(vals) == 1:
+        vals = vals * 2
+    return [round(x, 4) for x in vals]
 
 
 # ── 일정: 이전 값(우리 데이터) · 컨센서스(직접 입력) ──

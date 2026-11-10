@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>R·수량 계산기</title>
+<meta name="robots" content="noindex,nofollow,noarchive">  <!-- 개인 참고용: 검색엔진 노출 안 함 -->
+<!-- 이 페이지는 계산 공식만 있다. 입력값은 이 기기 브라우저(localStorage)에만 저장되고 어디로도 전송되지 않는다.
+     계좌금액 등 개인 값을 이 파일·저장소에 넣지 않는다. (account-tools 소관) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f2f4f7;--panel:#ffffff;--bd:#dfe3ea;--bd2:#eceff3;
+  --tx:#111a2b;--sub:#5a6577;--mute:#8b94a3;
+  --hd:#0d1b33;--hdtx:#ffffff;--hdsub:#9fb0cf;--acc:#3d5a99;
+  --up:#d42f2f;--dn:#1e64d0;
+  --warn-bg:#fff4e0;--warn-tx:#8a5300;--err-bg:#fdecec;--err-tx:#a32020;
+  --btn-on:#0d1b33;--btn-ontx:#fff;--in:#f7f8fa;
+}
+@media (prefers-color-scheme:dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme:dark;
+    --bg:#0b0f16;--panel:#121924;--bd:#222c3b;--bd2:#1a2230;
+    --tx:#e6ebf2;--sub:#9aa6b8;--mute:#7a869a;
+    --hd:#0e1522;--hdtx:#e6ebf2;--hdsub:#7d8da6;--acc:#38bdf8;
+    --up:#ff6b63;--dn:#5b9dff;
+    --warn-bg:#2b2213;--warn-tx:#f3c375;--err-bg:#2c1517;--err-tx:#ff9a94;
+    --btn-on:#e6ebf2;--btn-ontx:#0b0f16;--in:#0e141d;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0b0f16;--panel:#121924;--bd:#222c3b;--bd2:#1a2230;
+  --tx:#e6ebf2;--sub:#9aa6b8;--mute:#7a869a;
+  --hd:#0e1522;--hdtx:#e6ebf2;--hdsub:#7d8da6;--acc:#38bdf8;
+  --up:#ff6b63;--dn:#5b9dff;
+  --warn-bg:#2b2213;--warn-tx:#f3c375;--err-bg:#2c1517;--err-tx:#ff9a94;
+  --btn-on:#e6ebf2;--btn-ontx:#0b0f16;--in:#0e141d;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Pretendard,'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum';padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+a{color:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+
+.hd{background:var(--hd);color:var(--hdtx)}
+.hd .wrap{display:flex;align-items:center;gap:10px;min-height:52px}
+.hd h1{font-size:16px;font-weight:700;margin:0;white-space:nowrap}
+.hd .rt{margin-left:auto;display:flex;gap:8px}
+.hbtn{background:none;border:1px solid rgba(255,255,255,.22);color:var(--hdtx);font:inherit;font-size:12px;padding:5px 9px;border-radius:6px;cursor:pointer;text-decoration:none;white-space:nowrap}
+
+.card{background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:14px 14px 16px;margin-top:12px}
+.card h2{margin:0 0 10px;font-size:13px;font-weight:700;color:var(--sub);display:flex;align-items:center;gap:6px}
+.card h2 small{font-weight:500;color:var(--mute);font-size:11.5px}
+
+.seg{display:flex;border:1px solid var(--bd);border-radius:9px;overflow:hidden;background:var(--panel)}
+.seg button{flex:1;font:inherit;font-size:14px;font-weight:700;color:var(--sub);background:none;border:0;border-right:1px solid var(--bd);padding:11px 0;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--btn-on);color:var(--btn-ontx)}
+.segs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row+.row,.fld+.row,.row+.fld{margin-top:10px}
+.fld label{display:block;font-size:12px;color:var(--sub);font-weight:600;margin:0 0 4px 2px}
+.box{display:flex;align-items:center;background:var(--in);border:1px solid var(--bd);border-radius:9px;padding:0 11px;min-height:46px}
+.box:focus-within{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 25%,transparent)}
+.box input{flex:1;min-width:0;width:100%;font:inherit;font-size:17px;font-weight:700;color:var(--tx);background:none;border:0;outline:0;padding:10px 0;text-align:right}
+.box .u{color:var(--mute);font-size:13px;margin-left:6px;white-space:nowrap}
+.box.bad{border-color:var(--up)}
+.hint{font-size:11.5px;color:var(--mute);margin:4px 2px 0}
+.hint button{font:inherit;color:var(--acc);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
+
+.tg{display:flex;gap:8px;align-items:center}
+.tg+.tg{margin-top:8px}
+.tg .box{flex:1}
+.tg .x{flex:0 0 40px;height:46px;font:inherit;font-size:18px;color:var(--mute);background:none;border:1px solid var(--bd);border-radius:9px;cursor:pointer}
+.add{margin-top:8px;width:100%;font:inherit;font-size:13.5px;font-weight:600;color:var(--acc);background:none;border:1px dashed var(--bd);border-radius:9px;padding:10px;cursor:pointer}
+
+.msg{border-radius:9px;padding:10px 12px;font-size:13.5px;margin-top:10px}
+.msg.err{background:var(--err-bg);color:var(--err-tx)}
+.msg.warn{background:var(--warn-bg);color:var(--warn-tx)}
+
+.res .big{text-align:center;padding:6px 0 12px}
+.res .big .l{font-size:13px;color:var(--sub);font-weight:600}
+.res .big .q{font-size:40px;font-weight:800;letter-spacing:-1px;line-height:1.15}
+.res .big .q small{font-size:22px;font-weight:700;margin-left:2px}
+.res .big .s{font-size:12.5px;color:var(--mute)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:0;border-top:1px solid var(--bd2)}
+.kv div{padding:9px 2px;border-bottom:1px solid var(--bd2);font-size:14px}
+.kv div:nth-child(odd){color:var(--sub)}
+.kv div:nth-child(even){text-align:right;font-weight:700}
+.kv small{display:block;font-size:11.5px;color:var(--mute);font-weight:500}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+th{font-size:11.5px;color:var(--mute);font-weight:600;text-align:right;padding:0 2px 6px;border-bottom:1px solid var(--bd2)}
+th:first-child,td:first-child{text-align:left}
+td{text-align:right;padding:9px 2px;border-bottom:1px solid var(--bd2);font-weight:700}
+.up{color:var(--up)}.dn{color:var(--dn)}
+.dim{color:var(--mute);font-weight:500}
+
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--hd);color:var(--hdtx);padding:10px 0 calc(10px + env(safe-area-inset-bottom));box-shadow:0 -6px 18px rgba(0,0,0,.15)}
+.bar .wrap{display:flex;align-items:baseline;gap:10px}
+.bar .q{font-size:22px;font-weight:800}
+.bar .s{font-size:12.5px;color:var(--hdsub);margin-left:auto;text-align:right}
+
+.clear{display:block;width:100%;margin-top:14px;font:inherit;font-size:14px;font-weight:600;color:var(--up);background:var(--panel);border:1px solid var(--bd);border-radius:10px;padding:12px;cursor:pointer}
+footer{margin:18px 0 0;padding:14px 0 10px;border-top:1px solid var(--bd);color:var(--sub);font-size:12px;line-height:1.7}
+footer .disc{color:var(--tx);font-weight:600}
+</style>
+</head>
+<body>
+<header class="hd">
+  <div class="wrap">
+    <h1>R·수량 계산기</h1>
+    <div class="rt">
+      <a class="hbtn" href="./">대시보드</a>
+      <button class="hbtn" id="thm" type="button" aria-label="화면 밝기 전환">화면 전환</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="segs">
+    <div class="seg" id="mkt" role="group" aria-label="시장">
+      <button type="button" data-v="kr">국내 ₩</button><button type="button" data-v="us">해외 $</button>
+    </div>
+    <div class="seg" id="side" role="group" aria-label="방향">
+      <button type="button" data-v="long">롱(매수)</button><button type="button" data-v="short">숏</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>내 계좌 기준 <small>· 이 기기에만 저장</small></h2>
+    <div class="fld">
+      <label for="account">계좌금액</label>
+      <div class="box"><input id="account" inputmode="numeric" autocomplete="off" placeholder="0"><span class="u">원</span></div>
+    </div>
+    <div class="row">
+      <div class="fld">
+        <label for="riskPct">1회 허용손실</label>
+        <div class="box"><input id="riskPct" inputmode="decimal" autocomplete="off"><span class="u">%</span></div>
+      </div>
+      <div class="fld">
+        <label for="maxPct">최대 비중</label>
+        <div class="box"><input id="maxPct" inputmode="decimal" autocomplete="off"><span class="u">%</span></div>
+      </div>
+    </div>
+    <div class="fld" id="fxRow" hidden style="margin-top:10px">
+      <label for="fx">원/달러 환율</label>
+      <div class="box"><input id="fx" inputmode="decimal" autocomplete="off"><span class="u">원</span></div>
+      <p class="hint" id="fxHint">불러오는 중…</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>이번 매매 <small id="pxUnit">· 가격 단위 원</small></h2>
+    <div class="row">
+      <div class="fld">
+        <label for="entry">진입가</label>
+        <div class="box"><input id="entry" inputmode="decimal" autocomplete="off" placeholder="0"></div>
+      </div>
+      <div class="fld">
+        <label for="stop">손절가</label>
+        <div class="box"><input id="stop" inputmode="decimal" autocomplete="off" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="fld" style="margin-top:10px">
+      <label>목표가</label>
+      <div id="tgs"></div>
+      <button class="add" id="addTg" type="button">+ 목표가 추가</button>
+    </div>
+  </div>
+
+  <div id="msgs"></div>
+
+  <div class="card res" id="res" hidden>
+    <div class="big">
+      <div class="l" id="qLabel">매수 수량</div>
+      <div class="q" id="qty">–</div>
+      <div class="s" id="qSub"></div>
+    </div>
+    <div class="kv" id="kv"></div>
+    <div id="tgTable"></div>
+  </div>
+
+  <button class="clear" id="clear" type="button">입력값 지우기</button>
+
+  <footer>
+    <div>이 페이지는 계산만 합니다. 입력값은 <b>이 기기 브라우저에만</b> 저장되고 어디로도 전송되지 않습니다.</div>
+    <div>수량은 정수 내림. 수수료·세금·슬리피지·호가 단위는 반영하지 않았습니다.</div>
+    <div>환율 기본값: 한국은행 경제통계시스템(ECOS) 원/달러 매매기준율.</div>
+    <div class="disc">투자 판단의 책임은 투자자 본인에게 있습니다.</div>
+  </footer>
+</main>
+
+<div class="bar" id="bar"><div class="wrap"><span class="q" id="barQ">–</span><span class="s" id="barS">값을 입력하세요</span></div></div>
+
+<script src="calc.js"></script>
+<script>
+"use strict";
+const KEY = "calc.v1";
+const $ = id => document.getElementById(id);
+const MAX_TARGETS = 5;
+const DEFAULTS = { market: "kr", side: "long", account: "", riskPct: "1", maxPct: "20", fx: "", fxManual: false, entry: "", stop: "", targets: [""] };
+let S = load();
+let fxAuto = null;   // {value, as_of}
+
+// ── 저장 (이 기기 localStorage만) ─────────────────────
+function load() {
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && typeof s === "object") return Object.assign({}, DEFAULTS, s); } catch (e) {}
+  return Object.assign({}, DEFAULTS, { targets: [""] });
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+// ── 테마 (대시보드와 같은 설정 공유) ──────────────────
+(function () {
+  let t = null; try { t = localStorage.getItem("theme"); } catch (e) {}
+  if (t) document.documentElement.setAttribute("data-theme", t);
+  $("thm").onclick = () => {
+    const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("theme", next); } catch (e) {}
+  };
+})();
+
+// ── 숫자 입력: 천 단위 콤마 ───────────────────────────
+function clean(s, allowDot) {
+  s = String(s || "").replace(/[^\d.]/g, "");
+  if (!allowDot) return s.replace(/\./g, "");
+  const i = s.indexOf(".");
+  return i < 0 ? s : s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, "");
+}
+function withCommas(raw) {
+  if (raw === "") return "";
+  const [a, b] = raw.split(".");
+  const int = (a || "").replace(/^0+(?=\d)/, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return b === undefined ? int : (int || "0") + "." + b;
+}
+function num(raw) { if (raw === "" || raw == null) return null; const v = Number(String(raw).replace(/,/g, "")); return isFinite(v) ? v : null; }
+
+function bindNum(input, allowDot, onChange) {
+  input.addEventListener("input", () => {
+    const pos = input.selectionStart, before = input.value;
+    const digitsBefore = clean(before.slice(0, pos), allowDot).length;
+    const raw = clean(before, allowDot);
+    input.value = withCommas(raw);
+    let n = 0, p = 0;   // 커서 위치 복원: 커서 앞 숫자 개수 유지
+    while (p < input.value.length && n < digitsBefore) { if (input.value[p] !== ",") n++; p++; }
+    try { input.setSelectionRange(p, p); } catch (e) {}
+    onChange(raw);
+  });
+}
+
+// ── 화면 그리기 ───────────────────────────────────────
+const FIELDS = [["account", false], ["riskPct", true], ["maxPct", true], ["fx", true], ["entry", true], ["stop", true]];
+FIELDS.forEach(([id, dot]) => {
+  $(id).value = withCommas(clean(S[id], dot));
+  bindNum($(id), dot, raw => { S[id] = raw; if (id === "fx") S.fxManual = true; update(); });
+});
+
+function setSeg(el, v) { el.querySelectorAll("button").forEach(b => { b.classList.toggle("on", b.dataset.v === v); b.setAttribute("aria-pressed", b.dataset.v === v); }); }
+$("mkt").onclick = e => { const b = e.target.closest("button"); if (b) { S.market = b.dataset.v; update(); } };
+$("side").onclick = e => { const b = e.target.closest("button"); if (b) { S.side = b.dataset.v; update(); } };
+
+function renderTargets() {
+  const box = $("tgs"); box.innerHTML = "";
+  S.targets.forEach((t, i) => {
+    const row = document.createElement("div"); row.className = "tg";
+    row.innerHTML = `<div class="box"><span class="u" style="margin:0 6px 0 0">${i + 1}차</span><input inputmode="decimal" autocomplete="off" placeholder="선택" aria-label="목표가 ${i + 1}"></div>` +
+      (S.targets.length > 1 ? `<button class="x" type="button" aria-label="목표가 ${i + 1} 삭제">×</button>` : "");
+    const inp = row.querySelector("input");
+    inp.value = withCommas(clean(t, true));
+    bindNum(inp, true, raw => { S.targets[i] = raw; update(); });
+    const x = row.querySelector(".x");
+    if (x) x.onclick = () => { S.targets.splice(i, 1); renderTargets(); update(); };
+    box.appendChild(row);
+  });
+  $("addTg").hidden = S.targets.length >= MAX_TARGETS;
+}
+$("addTg").onclick = () => { if (S.targets.length < MAX_TARGETS) { S.targets.push(""); renderTargets(); update(); $("tgs").lastChild.querySelector("input").focus(); } };
+
+$("clear").onclick = () => {
+  if (!confirm("이 기기에 저장된 입력값(계좌금액 포함)을 모두 지울까요?")) return;
+  try { localStorage.removeItem(KEY); } catch (e) {}
+  S = Object.assign({}, DEFAULTS, { targets: [""] });
+  if (fxAuto) S.fx = String(fxAuto.value);
+  FIELDS.forEach(([id, dot]) => { $(id).value = withCommas(clean(S[id], dot)); });
+  renderTargets(); update();
+};
+
+// ── 형식 ──────────────────────────────────────────────
+const won = v => Math.round(v).toLocaleString("ko-KR") + "원";
+const usd = v => "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const n2 = (v, d) => v.toLocaleString("ko-KR", { maximumFractionDigits: d });
+function px(v) { return S.market === "us" ? usd(v) : won(v); }
+function money(krw, pxv) { return S.market === "us" ? `${won(krw)}<small>${usd(pxv)}</small>` : won(krw); }
+function signed(v, f) { const c = v > 0 ? "up" : v < 0 ? "dn" : ""; return `<span class="${c}">${v > 0 ? "+" : v < 0 ? "−" : ""}${f(Math.abs(v))}</span>`; }
+
+const FIELD_OF = { account_invalid: "account", risk_pct_invalid: "riskPct", max_pct_invalid: "maxPct", fx_invalid: "fx", entry_invalid: "entry", stop_invalid: "stop", stop_wrong_side: "stop" };
+
+function update() {
+  save();
+  setSeg($("mkt"), S.market); setSeg($("side"), S.side);
+  const us = S.market === "us";
+  $("fxRow").hidden = !us;
+  $("pxUnit").textContent = us ? "· 가격 단위 달러($)" : "· 가격 단위 원";
+  $("qLabel").textContent = S.side === "long" ? "매수 수량" : "매도(숏) 수량";
+  renderFxHint();
+
+  const input = {
+    account: num(S.account), riskPct: num(S.riskPct), maxPct: num(S.maxPct),
+    market: S.market, fx: num(S.fx), side: S.side,
+    entry: num(S.entry), stop: num(S.stop), targets: S.targets.map(num)
+  };
+  const r = Sizing.calc(input);
+
+  // 아직 아무것도 안 넣은 칸은 빨간 표시를 하지 않는다
+  const empty = id => S[id] === "" || S[id] == null;
+  FIELDS.forEach(([id]) => $(id).parentElement.classList.remove("bad"));
+  const shown = r.errors.filter(c => !(FIELD_OF[c] && FIELD_OF[c] !== "stop" && empty(FIELD_OF[c])) && !(c === "stop_invalid" && empty("stop")));
+  shown.forEach(c => { if (FIELD_OF[c]) $(FIELD_OF[c]).parentElement.classList.add("bad"); });
+
+  const msgs = [...new Set(shown)].map(c => `<div class="msg err">${Sizing.MESSAGES[c]}</div>`)
+    .concat([...new Set(r.warnings)].map(c => `<div class="msg warn">⚠ ${Sizing.MESSAGES[c]}</div>`));
+  $("msgs").innerHTML = msgs.join("");
+
+  const has = r.qty != null && r.riskPerShare != null;
+  $("res").hidden = !has;
+  if (!has) {
+    $("barQ").textContent = "–";
+    $("barS").textContent = r.errors.some(c => !empty(FIELD_OF[c] || "")) ? "입력값을 확인하세요" : "값을 입력하세요";
+    return;
+  }
+  const lbl = S.side === "long" ? "매수" : "숏";
+  $("qty").innerHTML = `${r.qty.toLocaleString("ko-KR")}<small>주</small>`;
+  $("qSub").textContent = r.capped && r.qty > 0 ? `위험 기준 ${r.qtyRisk.toLocaleString("ko-KR")}주 → 최대 비중으로 축소` : `손절폭 ${n2(r.riskPctOfEntry, 2)}%`;
+  $("barQ").textContent = `${lbl} ${r.qty.toLocaleString("ko-KR")}주`;
+  $("barS").innerHTML = r.qty > 0 ? `위험 ${won(r.actualRisk)} · 비중 ${n2(r.weight, 1)}%` : "0주 — 아래 안내 확인";
+
+  $("kv").innerHTML = [
+    ["1R (주당 위험)", money(r.riskPerShare, r.riskPx) + (us ? "" : `<small>손절폭 ${n2(r.riskPctOfEntry, 2)}%</small>`)],
+    ["1unit (허용손실)", `${won(r.unit)}<small>계좌의 ${n2(input.riskPct, 2)}%</small>`],
+    ["투입금액", `${money(r.cost, r.costPx)}<small>계좌 대비 ${n2(r.weight, 2)}% (최대 ${n2(input.maxPct, 2)}%)</small>`],
+    ["실제 위험금액", `${won(r.actualRisk)}<small>계좌 대비 ${n2(r.actualRiskPct, 2)}%</small>`]
+  ].map(([k, v]) => `<div>${k}</div><div>${v}</div>`).join("");
+
+  const tg = (r.targets || []).map((t, i) => t && `<tr><td>${i + 1}차 <span class="dim">${px(t.price)}</span></td><td>${signed(t.r, v => n2(v, 2) + "R")}</td><td>${signed(t.profit, won)}</td></tr>`).filter(Boolean);
+  $("tgTable").innerHTML = tg.length ? `<table><thead><tr><th>목표가</th><th>R 배수</th><th>예상 손익</th></tr></thead><tbody>${tg.join("")}</tbody></table>` : "";
+}
+
+// ── 환율 기본값: 같은 사이트의 data/usdkrw.json 마지막 값 ─────
+function renderFxHint() {
+  const h = $("fxHint");
+  if (!fxAuto) { h.textContent = "기준 환율을 불러오지 못했어요. 직접 입력하세요."; return; }
+  const base = `한국은행 ${fxAuto.as_of} 기준 ${n2(fxAuto.value, 1)}원`;
+  if (S.fxManual && num(S.fx) !== fxAuto.value) h.innerHTML = `직접 입력한 값 사용 중 · ${base} <button type="button" id="fxReset">기준값으로</button>`;
+  else h.textContent = base;
+  const b = $("fxReset");
+  if (b) b.onclick = () => { S.fx = String(fxAuto.value); S.fxManual = false; $("fx").value = withCommas(S.fx); update(); };
+}
+fetch("data/usdkrw.json", { cache: "no-cache" }).then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => {
+  const last = j.series && j.series[j.series.length - 1];
+  if (!last) return;
+  fxAuto = { value: last[1], as_of: last[0] };
+  if (!S.fxManual || !num(S.fx)) { S.fx = String(last[1]); S.fxManual = false; $("fx").value = withCommas(S.fx); }
+  update();
+}).catch(() => { $("fxHint").textContent = "기준 환율을 불러오지 못했어요. 직접 입력하세요."; });
+
+renderTargets();
+update();
+</script>
+</body>
+</html>

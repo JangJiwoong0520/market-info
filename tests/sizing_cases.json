@@ -1,0 +1,104 @@
+{
+  "_comment": "R·수량 계산 테스트 케이스. docs/calc.js(node)와 나중에 account-tools의 core/sizing.py(Python)가 같은 파일로 검증한다. 기대값은 손으로 계산한 값. 금액은 원화, *Px는 가격 통화. 숫자 비교 허용오차: 절대 1e-6 또는 상대 1e-9. errors·warnings는 순서 무관 비교. expect에 없는 항목은 검사하지 않는다.",
+  "cases": [
+    {
+      "name": "국내 롱 기본 — 수량이 최대 비중과 정확히 같으면 축소 아님",
+      "input": {"account": 50000000, "riskPct": 1, "maxPct": 20, "market": "kr", "fx": null, "side": "long", "entry": 10000, "stop": 9500, "targets": [11000, 12000]},
+      "expect": {"ok": true, "riskPerShare": 500, "unit": 500000, "qtyRisk": 1000, "qtyMax": 1000, "capped": false, "qty": 1000, "cost": 10000000, "weight": 20, "actualRisk": 500000, "errors": [], "warnings": [],
+                 "targets": [{"r": 2, "profit": 1000000}, {"r": 4, "profit": 2000000}]}
+    },
+    {
+      "name": "국내 롱 — 최대 비중 초과로 수량 축소",
+      "input": {"account": 50000000, "riskPct": 1, "maxPct": 20, "market": "kr", "fx": null, "side": "long", "entry": 10000, "stop": 9800, "targets": []},
+      "expect": {"ok": true, "riskPerShare": 200, "qtyRisk": 2500, "qtyMax": 1000, "capped": true, "qty": 1000, "cost": 10000000, "actualRisk": 200000, "errors": [], "warnings": ["capped_by_max"]}
+    },
+    {
+      "name": "국내 롱 — 정수 내림 (285.71 → 285)",
+      "input": {"account": 10000000, "riskPct": 1, "maxPct": 100, "market": "kr", "fx": null, "side": "long", "entry": 7350, "stop": 7000, "targets": []},
+      "expect": {"ok": true, "unit": 100000, "riskPerShare": 350, "qtyRisk": 285, "qtyMax": 1360, "qty": 285, "cost": 2094750, "weight": 20.9475, "actualRisk": 99750, "capped": false}
+    },
+    {
+      "name": "해외 — 부동소수점 경계 (10.30−10.10=0.2000000000000011 이어도 500주)",
+      "input": {"account": 10000000, "riskPct": 1, "maxPct": 100, "market": "us", "fx": 1000, "side": "long", "entry": 10.30, "stop": 10.10, "targets": []},
+      "expect": {"ok": true, "riskPx": 0.2, "riskPerShare": 200, "qtyRisk": 500, "qtyMax": 970, "qty": 500, "costPx": 5150, "cost": 5150000, "actualRisk": 100000}
+    },
+    {
+      "name": "해외 롱 기본 — 달러 가격, 원화 계좌",
+      "input": {"account": 50000000, "riskPct": 1, "maxPct": 20, "market": "us", "fx": 1355.7, "side": "long", "entry": 150, "stop": 140, "targets": [170]},
+      "expect": {"ok": true, "riskPx": 10, "riskPerShare": 13557, "unit": 500000, "qtyRisk": 36, "qtyMax": 49, "capped": false, "qty": 36, "costPx": 5400, "cost": 7320780, "weight": 14.64156, "actualRisk": 488052,
+                 "targets": [{"r": 2, "profitPx": 720, "profit": 976104}]}
+    },
+    {
+      "name": "숏 기본 — 부호 반대",
+      "input": {"account": 50000000, "riskPct": 1, "maxPct": 20, "market": "kr", "fx": null, "side": "short", "entry": 10000, "stop": 10500, "targets": [9000]},
+      "expect": {"ok": true, "riskPerShare": 500, "qtyRisk": 1000, "qtyMax": 1000, "qty": 1000, "actualRisk": 500000, "warnings": [],
+                 "targets": [{"r": 2, "profit": 1000000}]}
+    },
+    {
+      "name": "롱인데 손절가 = 진입가 → 차단",
+      "input": {"account": 50000000, "riskPct": 1, "maxPct": 20, "market": "kr", "fx": null, "side": "long", "entry": 10000, "stop": 10000, "targets": []},
+      "expect": {"ok": false, "errors": ["stop_wrong_side"]}
+    },
+    {
+      "name": "롱인데 손절가 > 진입가 → 차단",
+      "input": {"account": 50000000, "riskPct": 1, "maxPct": 20, "market": "kr", "fx": null, "side": "long", "entry": 10000, "stop": 10500, "targets": []},
+      "expect": {"ok": false, "errors": ["stop_wrong_side"]}
+    },
+    {
+      "name": "숏인데 손절가 < 진입가 → 차단",
+      "input": {"account": 50000000, "riskPct": 1, "maxPct": 20, "market": "kr", "fx": null, "side": "short", "entry": 10000, "stop": 9500, "targets": []},
+      "expect": {"ok": false, "errors": ["stop_wrong_side"]}
+    },
+    {
+      "name": "1unit < 1R → 0주 안내",
+      "input": {"account": 1000000, "riskPct": 1, "maxPct": 20, "market": "kr", "fx": null, "side": "long", "entry": 100000, "stop": 80000, "targets": []},
+      "expect": {"ok": false, "unit": 10000, "riskPerShare": 20000, "qtyRisk": 0, "qty": 0, "errors": ["qty_zero_risk"], "warnings": []}
+    },
+    {
+      "name": "최대 비중으로 1주도 안 됨 → 0주 안내 (축소 경고는 띄우지 않음)",
+      "input": {"account": 1000000, "riskPct": 1, "maxPct": 10, "market": "kr", "fx": null, "side": "long", "entry": 500000, "stop": 495000, "targets": []},
+      "expect": {"ok": false, "qtyRisk": 2, "qtyMax": 0, "capped": true, "qty": 0, "errors": ["qty_zero_max"], "warnings": []}
+    },
+    {
+      "name": "경계 — 1unit이 1R과 정확히 같으면 1주",
+      "input": {"account": 1000000, "riskPct": 1, "maxPct": 20, "market": "kr", "fx": null, "side": "long", "entry": 50000, "stop": 40000, "targets": []},
+      "expect": {"ok": true, "unit": 10000, "riskPerShare": 10000, "qtyRisk": 1, "qtyMax": 4, "qty": 1, "actualRisk": 10000}
+    },
+    {
+      "name": "빈칸·0·음수 입력 차단",
+      "input": {"account": 0, "riskPct": 0, "maxPct": 20, "market": "kr", "fx": null, "side": "long", "entry": -1, "stop": null, "targets": []},
+      "expect": {"ok": false, "errors": ["account_invalid", "risk_pct_invalid", "entry_invalid", "stop_invalid"]}
+    },
+    {
+      "name": "허용손실 100% 초과, 최대 비중 0 차단",
+      "input": {"account": 50000000, "riskPct": 101, "maxPct": 0, "market": "kr", "fx": null, "side": "long", "entry": 10000, "stop": 9500, "targets": []},
+      "expect": {"ok": false, "errors": ["risk_pct_invalid", "max_pct_invalid"]}
+    },
+    {
+      "name": "해외인데 환율 없음 → 차단",
+      "input": {"account": 50000000, "riskPct": 1, "maxPct": 20, "market": "us", "fx": null, "side": "long", "entry": 150, "stop": 140, "targets": []},
+      "expect": {"ok": false, "errors": ["fx_invalid"]}
+    },
+    {
+      "name": "목표가가 손실 방향 → 경고 + 음수 R, 빈 목표가는 null",
+      "input": {"account": 50000000, "riskPct": 1, "maxPct": 20, "market": "kr", "fx": null, "side": "long", "entry": 10000, "stop": 9500, "targets": [9800, null]},
+      "expect": {"ok": true, "qty": 1000, "warnings": ["target_wrong_side"], "targets": [{"r": -0.4, "profit": -200000}, null]}
+    },
+    {
+      "name": "소수 허용손실 % (0.7%)",
+      "input": {"account": 30000000, "riskPct": 0.7, "maxPct": 20, "market": "kr", "fx": null, "side": "long", "entry": 7000, "stop": 6300, "targets": []},
+      "expect": {"ok": true, "unit": 210000, "riskPerShare": 700, "qtyRisk": 300, "qtyMax": 857, "qty": 300, "actualRisk": 210000}
+    },
+    {
+      "name": "끝자리 있는 계좌금액",
+      "input": {"account": 123456789, "riskPct": 0.5, "maxPct": 30, "market": "kr", "fx": null, "side": "long", "entry": 1234, "stop": 1199, "targets": []},
+      "expect": {"ok": true, "unit": 617283.945, "riskPerShare": 35, "qtyRisk": 17636, "qtyMax": 30013, "qty": 17636, "cost": 21762824, "actualRisk": 617260}
+    },
+    {
+      "name": "숏 + 해외 + 최대 비중 축소",
+      "input": {"account": 20000000, "riskPct": 2, "maxPct": 10, "market": "us", "fx": 1400, "side": "short", "entry": 50, "stop": 51, "targets": [45]},
+      "expect": {"ok": true, "riskPx": 1, "riskPerShare": 1400, "unit": 400000, "qtyRisk": 285, "qtyMax": 28, "capped": true, "qty": 28, "costPx": 1400, "cost": 1960000, "actualRisk": 39200, "warnings": ["capped_by_max"],
+                 "targets": [{"r": 5, "profitPx": 140, "profit": 196000}]}
+    }
+  ]
+}

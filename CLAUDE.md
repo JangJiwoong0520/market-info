@@ -135,3 +135,9 @@ market-info/
 - 수집 후보 사이트의 이용약관·robots.txt를 먼저 확인하고 사용자에게 보고. 금지되어 있으면 구현하지 않는다.
 - 허용될 경우에도 **종목·증권사·날짜·투자의견·목표가 숫자만** 저장. 리포트 본문·PDF는 저장·게시하지 않는다.
 - 이 기능은 공개 페이지가 아니라 **로컬 전용**으로 만든다(이 공개 저장소에 넣지 않음).
+
+## R·수량 계산기 (`docs/calc.html`) — 매매 도구(account-tools) 소관
+- `docs/calc.html`(화면)·`docs/calc.js`(계산 로직)·`tests/sizing_cases.json`·`tests/calc.test.js`는 별도 "매매 도구(account-tools)" 작업 소관이다. 대시보드 유지보수 작업에서는 건드리지 않는다(대시보드 헤더의 "계산기" 링크만 연결).
+- **개인 데이터 저장 금지**: 계좌금액·보유종목·매매내역 등 개인 값을 이 파일·저장소에 절대 넣지 않는다. 입력값은 사용자 기기 브라우저(localStorage)에만 저장되고 어디로도 전송하지 않는다.
+- 환율 기본값은 `docs/data/usdkrw.json`의 마지막 값을 읽는다 → 이 파일의 형식(`series`)을 바꾸면 계산기도 함께 확인한다.
+- 계산을 고치면 `node tests/calc.test.js`가 모두 통과해야 한다. 같은 케이스 파일로 account-tools의 Python `core/sizing.py`도 검증한다.

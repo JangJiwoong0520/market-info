@@ -216,6 +216,8 @@ def summarize(ind: dict, obj: dict) -> dict:
         d = parse_date(k)
         def at(dd: date):
             r = value_at_or_before(s, dd.isoformat())
+            if not r and s and (parse_date(s[0][0]) - dd).days <= 7:   # 이력이 막 시작된 경우 가장 가까운 값
+                r = s[0]
             return r[1] if r else None
         out["cmp"] = {"1D": s[-2][1] if len(s) > 1 else None, "1W": at(d - timedelta(days=7)),
                       "1M": at(d - timedelta(days=30)), "1Y": at(d.replace(year=d.year - 1))}

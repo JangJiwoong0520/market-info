@@ -56,6 +56,8 @@ def kr_schedule(start: date, end: date, max_pages: int = 10) -> list[dict]:
             code = (re.findall(r"(?:isurCd|repIsuSrtCd|companyCode|['\"])\s*[:=,(]?\s*['\"]?A?(\d{6})", tr) or re.findall(r"\b(\d{6})\b", tr) or [""])[0]
             rows.append({"company": c[1], "title": c[2], "place": c[3], "date": dt[:10],
                          "time": dt[11:16].replace("--:--", "") if len(dt) > 10 else "", "code": code})
+        if page == 1 and got == 0:                      # 표 구조가 바뀐 경우 원인 파악용
+            log.warning("  KIND 행을 못 읽음: tr %d개, 예시 %s", len(trs), [re.sub(r"\s+", " ", t)[:400] for t in trs[1:3]])
         if got < 100:
             break
     # 실적발표만, 같은 회사·날짜는 한글 제목 하나만

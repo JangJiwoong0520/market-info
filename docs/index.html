@@ -14,7 +14,9 @@
   --tx:#111a2b;--sub:#5a6577;--mute:#8b94a3;--grid:#edf0f4;
   --hd:#0d1b33;--hd2:#13264a;--hdtx:#ffffff;--hdsub:#9fb0cf;--acc:#3d5a99;
   --up:#d42f2f;--dn:#1e64d0;--flat:#8b94a3;
-  --s1:#3d5a99;--s2:#16a372;--s3:#e08a00;--sp:#98a2b3;--bar:#9fb0cf;--bar2:#3d5a99;
+  --s1:#1e3a8a;--s2:#0f8a7e;--s3:#c2620a;--sp:#8b94a3;--bar:#9fb0cf;--bar2:#3d5a99;
+  --t1:#4338ca;--t2:#0f8a7e;--t3:#c2620a;--t4:#a21caf;--t5:#0369a1;
+  --fg1:#1e5bc6;--fg2:#8db3ec;--fg3:#c4cad4;--fg4:#f0a19b;--fg5:#cf2e2e;--mk:#111a2b;
   --tip:#0d1b33;--tiptx:#fff;--warn-bg:#fff4e0;--warn-tx:#8a5300;--btn-on:#0d1b33;--btn-ontx:#fff;
 }
 @media (prefers-color-scheme:dark){
@@ -24,7 +26,9 @@
     --tx:#e6ebf2;--sub:#9aa6b8;--mute:#7a869a;--grid:#222c3d;
     --hd:#0e1522;--hd2:#141e30;--hdtx:#e6ebf2;--hdsub:#7d8da6;--acc:#8fa9ff;
     --up:#ff6b63;--dn:#5b9dff;--flat:#6c788b;
-    --s1:#8fa9ff;--s2:#2ec99a;--s3:#f0b03c;--sp:#9aa6b8;--bar:#6a80b0;--bar2:#c3d1ff;
+    --s1:#a5b4fc;--s2:#2dd4bf;--s3:#fbbf24;--sp:#9aa6b8;--bar:#6a80b0;--bar2:#c3d1ff;
+    --t1:#a5b4fc;--t2:#2dd4bf;--t3:#fbbf24;--t4:#f0abfc;--t5:#7dd3fc;
+    --fg1:#3b82f6;--fg2:#93c5fd;--fg3:#6b7280;--fg4:#fca5a5;--fg5:#ef4444;--mk:#f8fafc;
     --tip:#24324a;--tiptx:#e6ebf2;--warn-bg:#2b2213;--warn-tx:#f3c375;--btn-on:#e6ebf2;--btn-ontx:#0b0f16;
   }
 }
@@ -34,7 +38,9 @@
   --tx:#e6ebf2;--sub:#9aa6b8;--mute:#7a869a;--grid:#222c3d;
   --hd:#0e1522;--hd2:#141e30;--hdtx:#e6ebf2;--hdsub:#7d8da6;--acc:#8fa9ff;
   --up:#ff6b63;--dn:#5b9dff;--flat:#6c788b;
-  --s1:#8fa9ff;--s2:#2ec99a;--s3:#f0b03c;--sp:#9aa6b8;--bar:#6a80b0;--bar2:#c3d1ff;
+  --s1:#a5b4fc;--s2:#2dd4bf;--s3:#fbbf24;--sp:#9aa6b8;--bar:#6a80b0;--bar2:#c3d1ff;
+    --t1:#a5b4fc;--t2:#2dd4bf;--t3:#fbbf24;--t4:#f0abfc;--t5:#7dd3fc;
+    --fg1:#3b82f6;--fg2:#93c5fd;--fg3:#6b7280;--fg4:#fca5a5;--fg5:#ef4444;--mk:#f8fafc;
   --tip:#24324a;--tiptx:#e6ebf2;--warn-bg:#2b2213;--warn-tx:#f3c375;--btn-on:#e6ebf2;--btn-ontx:#0b0f16;
 }
 *{box-sizing:border-box}
@@ -117,6 +123,19 @@ section{padding:26px 0 6px}
 .chg .l{display:block;font-size:11px;color:var(--mute)}
 .chg .v{font-size:13.5px;font-weight:700;white-space:nowrap}
 .chg .l2{font-size:10.5px;color:var(--mute);white-space:nowrap}
+.fgbar{padding:6px 16px 12px}
+.fgtrack{position:relative;display:flex;gap:2px;height:12px;margin-top:22px}
+.fgtrack span{border-radius:3px;opacity:.55}
+.fgtrack span.on{opacity:1}
+.fgmk{position:absolute;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;background:var(--mk);border-radius:2px;box-shadow:0 0 0 2px var(--panel)}
+.fgmk b{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:3px;font-size:12px;font-weight:800;color:var(--panel);background:var(--mk);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.fglab{display:flex;gap:2px;margin-top:6px}
+.fglab span{text-align:center;font-size:10.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:clip}
+.fglab span.on{color:var(--tx);font-weight:700}
+.fgscale{position:relative;height:12px;margin-top:1px;font-size:9.5px;color:var(--mute)}
+.fgscale span{position:absolute;transform:translateX(-50%)}
+.fgscale span:nth-child(1){left:0;transform:none}.fgscale span:nth-child(2){left:25%}.fgscale span:nth-child(3){left:45%}
+.fgscale span:nth-child(4){left:55%}.fgscale span:nth-child(5){left:75%}.fgscale span:nth-child(6){right:0;left:auto;transform:none}
 @media (max-width:400px){.chg div{padding-left:10px}.chg .v{font-size:12.5px}}
 .one{padding:7px 16px 8px;border-top:1px solid var(--bd2);border-bottom:1px solid var(--bd2);font-size:13px;color:var(--sub)}
 .one b{color:var(--tx)}
@@ -127,7 +146,7 @@ section{padding:26px 0 6px}
 .lg button{font:inherit;color:inherit;background:none;border:1px solid transparent;border-radius:6px;padding:3px 6px;margin:-3px -6px;cursor:pointer}
 @media (hover:hover){.lg button:hover{border-color:var(--bd)}}
 .lg button.off{opacity:.38;text-decoration:line-through}
-.lg i{display:inline-block;width:14px;height:0;border-top:2.5px solid currentColor}
+.lg i{display:inline-block;width:16px;height:0;border-top:3px solid currentColor}
 .lg i.d{border-top-style:dashed;border-top-width:2px}
 .lg i.b{width:9px;height:9px;border:0;border-radius:2px}
 .lg b{color:var(--tx);font-weight:700}
@@ -279,7 +298,8 @@ function render(){
   }
 
   // 섹션: 맨 앞에 즐겨찾기
-  M.sections.forEach(s=>(s.cards||[]).forEach(c=>{ CARDMAP[c.main]={card:c,section:s}; }));
+  let tone=0;
+  M.sections.forEach(s=>(s.cards||[]).forEach(c=>{ CARDMAP[c.main]={card:c,section:s}; if(!c.tone) c.tone=`--t${tone++%5+1}`; }));
   SECTIONS=[{id:"fav",label:"★ 즐겨찾기",eyebrow:"FAVORITES",note:"이 기기(브라우저)에만 저장",type:"fav",periods:M.periods},...M.sections];
   document.getElementById("nav").innerHTML=SECTIONS.map((s,i)=>`<button type="button" class="tab${i===1?" on":""}" data-s="${s.id}" aria-expanded="false">${esc(s.label)}${(s.type==="calendar"||s.type==="earnings")?"":'<span class="cv2">▾</span>'}</button>`).join("");
   const main=document.getElementById("main");
@@ -366,6 +386,7 @@ const LINE_COLORS=["--s1","--s2","--s3"];
 function lineStyle(card){   // 선별 색: 점선(기준금리)=회색, 나머지는 고정 순서
   const out={}; let k=0;
   const order=[card.main,...card.lines.filter(l=>l!==card.main&&!(card.dashed||[]).includes(l))];
+  if(card.lines.length===1&&card.tone){ out[card.main]={color:card.tone,dash:false}; return out; }
   order.forEach(id=>{ out[id]={color:LINE_COLORS[k++%3],dash:false}; });
   (card.dashed||[]).forEach(id=>{ out[id]={color:"--sp",dash:true}; });
   return out;
@@ -382,8 +403,16 @@ function cardHTML(card,s,pre=""){
     const c=sm.chg||{};
     mid=`<div class="chg">${["1D","1M","1Y","YTD"].map((k,i)=>`<div><span class="l">${["1일","1개월","1년","연초"][i]}</span><span class="v ${dir(c[k])}">${fmtChg(ind.kind,c[k],i>0)}</span></div>`).join("")}</div>`;
   }else if(ind.kind==="gauge"){
-    const c=sm.cmp||{};
-    mid=`<div class="chg">${["1D","1W","1M","1Y"].map((k,i)=>`<div><span class="l">${["전일","1주 전","1개월 전","1년 전"][i]}</span><span class="v ${fgDir(c[k])}">${fmt(c[k],0)}</span> <span class="l2">${fgRating(c[k])}</span></div>`).join("")}</div>`;
+    const c=sm.cmp||{}, v=sm.value;
+    const segs=[[25,"극단적 공포"],[20,"공포"],[10,"중립"],[20,"탐욕"],[25,"극단적 탐욕"]];
+    const act=v==null?-1:v<25?0:v<45?1:v<=55?2:v<=75?3:4;
+    const pos=Math.max(0,Math.min(100,v||0));
+    const bar=`<div class="fgbar" role="img" aria-label="현재 ${fmt(v,0)}점, ${fgRating(v)}">
+      <div class="fgtrack">${segs.map(([w],i)=>`<span style="flex:${w};background:var(--fg${i+1})" class="${i===act?"on":""}"></span>`).join("")}
+        <div class="fgmk" style="left:${pos}%"><b>${fmt(v,0)}</b></div></div>
+      <div class="fglab">${segs.map(([w,l],i)=>`<span style="flex:${w}" class="${i===act?"on":""}">${l}</span>`).join("")}</div>
+      <div class="fgscale"><span>0</span><span>25</span><span>45</span><span>55</span><span>75</span><span>100</span></div></div>`;
+    mid=bar+`<div class="chg">${["1D","1W","1M","1Y"].map((k,i)=>`<div><span class="l">${["전일","1주 전","1개월 전","1년 전"][i]}</span><span class="v ${fgDir(c[k])}">${fmt(c[k],0)}</span> <span class="l2">${fgRating(c[k])}</span></div>`).join("")}</div>`;
   }else if(ind.kind==="macro"){
     mid=`<div class="one">이전 <b>${fmtVal(ind,sm.prev)}</b></div>`;
   }else if(ind.kind==="export"){
@@ -391,7 +420,7 @@ function cardHTML(card,s,pre=""){
   }
   const st=lineStyle(card);
   let lg="";
-  if(s.type==="exports") lg=`<div class="lg"><span><i class="b" style="background:var(--bar)"></i>월 수출</span><span><i style="color:var(--bar2)"></i>12개월 평균</span></div>`;
+  if(s.type==="exports") lg=`<div class="lg"><span><i class="b" style="background:var(${card.tone||"--bar"});opacity:.45"></i>월 수출</span><span><i style="color:var(${card.tone||"--bar2"})"></i>12개월 평균</span></div>`;
   else if(multi) lg=`<div class="lg" data-card="${card.main}">${card.lines.map(id=>{ const off=isHidden(card,id); return `<button type="button" data-line="${id}" class="${off?"off":""}" aria-pressed="${!off}" title="눌러서 선 켜기/끄기"><i class="${st[id].dash?"d":""}" style="color:var(${st[id].color})"></i>${esc(I[id].short)} <b>${fmtVal(I[id],(I[id].summary||{}).value)}</b></button>`; }).join("")}</div>`;
   const src=I[card.main].source;
   const fav=getFav().includes(card.main);
@@ -640,31 +669,38 @@ function drawChart(c){
     const s=lines[0]; const n=s.pts.length; const slot=(W-padL-padR)/Math.max(n,1);
     const bw=Math.max(1,Math.min(24,slot-(slot>4?2:0))); const y0=Y(0);
     s.pts.forEach(p=>{ const x=X(toT(p[0]))-bw/2, y=Y(p[1]); const top=Math.min(y,y0), h=Math.max(1,Math.abs(y0-y));
-      svg+=`<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${bw>6?2:0}" style="fill:var(${isExp?"--bar":"--s1"})"${isBar?' opacity=".85"':""}/>`; });
+      svg+=`<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${bw>6?2:0}" style="fill:var(${card.tone||"--s1"})" opacity="${isExp?".55":".8"}"/>`; });
     svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y0}" y2="${y0}" style="stroke:var(${"--mute"})" stroke-width="1"/>`;
-    if(avg&&avg.length) svg+=`<path d="${avg.map((p,i)=>(i?"L":"M")+X(toT(p[0])).toFixed(1)+","+Y(p[1]).toFixed(1)).join("")}" fill="none" style="stroke:var(${"--bar2"})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if(avg&&avg.length) svg+=`<path d="${avg.map((p,i)=>(i?"L":"M")+X(toT(p[0])).toFixed(1)+","+Y(p[1]).toFixed(1)).join("")}" fill="none" style="stroke:var(${card.tone||"--bar2"})" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
   }else{
     // 선 (점선·계단식 먼저 → 실선을 위에)
     const order=[...lines].sort((a,b)=>(b.style.dash?1:0)-(a.style.dash?1:0));
     const maxN=Math.round(W-padL-padR);
+    const gid="g"+el.id.replace(/[^a-z0-9]/gi,"");
     order.forEach(l=>{
       const pts=l.ind.step?l.pts:thin(l.pts,maxN);
       let d="";
       pts.forEach((p,i)=>{ const x=X(toT(p[0])).toFixed(1), y=Y(p[1]).toFixed(1);
         if(!i) d+=`M${x},${y}`; else if(l.ind.step) d+=`H${x}V${y}`; else d+=`L${x},${y}`; });
       if(l.ind.step) d+=`H${X(t1).toFixed(1)}`;
-      svg+=`<path d="${d}" fill="none" style="stroke:var(${l.style.color})" stroke-width="${l.style.dash?1.6:2}" ${l.style.dash?'stroke-dasharray="5 4"':""} stroke-linejoin="round" stroke-linecap="round"/>`;
+      const isMain=l.id===card.main&&!l.style.dash;
+      if(isMain&&pts.length>1){       // 주선 아래 옅은 채움 → 배경과 확실히 구분
+        const x0=X(toT(pts[0][0])).toFixed(1), x1=(l.ind.step?X(t1):X(toT(pts[pts.length-1][0]))).toFixed(1), yb=(H-padB).toFixed(1);
+        svg+=`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(${l.style.color})" stop-opacity=".28"/><stop offset="1" style="stop-color:var(${l.style.color})" stop-opacity="0"/></linearGradient></defs>`+
+             `<path d="${d}L${x1},${yb}L${x0},${yb}Z" fill="url(#${gid})" stroke="none"/>`;
+      }
+      svg+=`<path d="${d}" fill="none" style="stroke:var(${l.style.color})" stroke-width="${l.style.dash?1.8:isMain?2.6:2.2}" ${l.style.dash?'stroke-dasharray="5 4"':""} stroke-linejoin="round" stroke-linecap="round"/>`;
     });
     // 끝점
     order.forEach(l=>{ const p=l.pts[l.pts.length-1]; const x=l.ind.step?X(t1):X(toT(p[0]));
-      svg+=`<circle cx="${x.toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="4" style="fill:var(${l.style.color});stroke:var(--panel)" stroke-width="2"/>`; });
+      svg+=`<circle cx="${x.toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="4.5" style="fill:var(${l.style.color});stroke:var(--panel)" stroke-width="2"/>`; });
   }
   svg+=`<g class="hov"></g></svg><div class="tip"></div>`;
   el.innerHTML=svg;
 
   // ── 터치·마우스 툴팁 ──
   const tip=el.querySelector(".tip"), hov=el.querySelector(".hov"), svgEl=el.querySelector("svg");
-  const ser=isExp?[{lab:"월 수출",color:"--bar",pts:lines[0].pts,ind:lines[0].ind},{lab:"12개월 평균",color:"--bar2",pts:avg||[],ind:lines[0].ind}]
+  const ser=isExp?[{lab:"월 수출",color:card.tone||"--bar",pts:lines[0].pts,ind:lines[0].ind},{lab:"12개월 평균",color:card.tone||"--bar2",pts:avg||[],ind:lines[0].ind}]
            :lines.map(l=>({lab:l.ind.short,color:l.style.color,pts:l.pts,ind:l.ind,step:l.ind.step}));
   const allKeys=[...new Set(ser.flatMap(s=>s.pts.map(p=>p[0])))].sort();
   function valAt(s,key){ let lo2=0,hi2=s.pts.length-1,a=null; while(lo2<=hi2){const m=(lo2+hi2)>>1; if(s.pts[m][0]<=key){a=s.pts[m];lo2=m+1;}else hi2=m-1;} return a&&(s.step||a[0]===key||key.length===7?a: (toT(key)-toT(a[0])<6*864e5?a:null)); }

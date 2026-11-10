@@ -48,5 +48,16 @@ def fetch_crypto(ind: dict, start: date, end: date) -> list[list]:
     return sorted([k, v] for k, v in out.items() if start.isoformat() <= k <= end.isoformat())
 
 
+def fetch_stockhub(ind: dict, start: date, end: date) -> list[list]:
+    """StockHub 한국 공포·탐욕 — 최근 30일만 제공 → 매일 실행하며 누적."""
+    data = get("https://stockhub.kr/api/fear-greed/history",
+               headers=dict(BROWSER, Referer="https://stockhub.kr/fear-greed", Origin="https://stockhub.kr")).json()
+    key = ind.get("field", "kr")
+    out = {r["date"]: float(r[key]) for r in data.get("data", []) if r.get(key) is not None}
+    if not out:
+        raise CollectorError("StockHub 데이터 없음")
+    return sorted([k, v] for k, v in out.items() if start.isoformat() <= k <= end.isoformat())
+
+
 def fetch(ind: dict, start: date, end: date) -> list[list]:
-    return fetch_cnn(ind, start, end) if ind["source"] == "cnn" else fetch_crypto(ind, start, end)
+    return {"cnn": fetch_cnn, "alternative": fetch_crypto, "stockhub": fetch_stockhub}[ind["source"]](ind, start, end)

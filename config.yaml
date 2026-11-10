@@ -34,6 +34,10 @@ sources:
   derived: { name: 한국은행·브라질 중앙은행, url: "" }
   cnn:     { name: CNN, url: "https://edition.cnn.com/markets/fear-and-greed" }
   alternative: { name: alternative.me, url: "https://alternative.me/crypto/fear-and-greed-index/" }
+  stockhub: { name: StockHub, url: "https://stockhub.kr/fear-greed" }
+  kind:    { name: KRX KIND, url: "https://kind.krx.co.kr/corpgeneral/irschedule.do?method=searchIRScheduleMain&gubun=iRSchedule" }
+  naver:   { name: "네이버 금융(FnGuide 컨센서스)", url: "https://finance.naver.com" }
+  nasdaq:  { name: Nasdaq, url: "https://www.nasdaq.com/market-activity/earnings" }
 
 # ── 지표 목록 ──────────────────────────────────────────────
 indicators:
@@ -74,6 +78,7 @@ indicators:
   # 심리 지표 (개인 참고용 — 문제가 되면 public: false)
   - { id: vix,       name: VIX 변동성 지수, short: VIX, source: yahoo, symbol: "^VIX", unit: pt, kind: level, decimals: 2, public: true }
   - { id: cnn_fg,    name: 美 공포·탐욕 지수 (CNN), short: 美 공포탐욕, source: cnn, unit: 점, kind: gauge, decimals: 0, public: true }
+  - { id: kr_fg,     name: 韓 공포·탐욕 지수 (StockHub), short: 韓 공포탐욕, source: stockhub, field: kr, unit: 점, kind: gauge, decimals: 0, public: true }   # 최근 30일만 제공 → 매일 누적
   - { id: crypto_fg, name: 코인 공포·탐욕 지수, short: 코인 공포탐욕, source: alternative, unit: 점, kind: gauge, decimals: 0, public: true }
 
   # 경제지표 (월간)
@@ -141,7 +146,13 @@ sections:
     cards:
       - { main: vix }
       - { main: cnn_fg, range: [0, 100] }
+      - { main: kr_fg, range: [0, 100] }
       - { main: crypto_fg, range: [0, 100] }
+  - id: earnings
+    label: 실적발표
+    eyebrow: EARNINGS
+    note: 국내 KRX KIND(영업이익 컨센서스·전년 동기는 네이버 금융, 억원) · 미국 Nasdaq(시가총액 300억 달러 이상)
+    type: earnings
   - id: calendar
     label: 주요 일정
     eyebrow: CALENDAR
@@ -178,6 +189,16 @@ sections:
       - { main: exp_8507 }
       - { main: exp_3304 }
       - { main: exp_8471 }
+
+# ── 실적발표 일정 (개인 참고용) ─────────────────────────────
+earnings:
+  enabled: true
+  days: 21               # 국내: 오늘부터 며칠
+  kr: true
+  kr_max_consensus: 80   # 네이버 컨센서스 조회 최대 종목 수 (너무 많이 조회하지 않게)
+  us: true
+  us_days: 14            # 미국: 오늘부터 며칠 (날짜마다 1회 조회)
+  us_min_cap_b: 30       # 미국: 시가총액 300억 달러 이상만
 
 # ── 주요 일정 ───────────────────────────────────────────────
 # 오늘부터 3주 이내 일정만 화면에 표시된다. (60일치는 docs/data/calendar.json에 저장)

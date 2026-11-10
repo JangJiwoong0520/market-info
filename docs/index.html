@@ -162,6 +162,14 @@ section{padding:26px 0 6px}
 .cal .calnote{padding:9px 12px;font-size:11.5px;color:var(--mute);border-top:1px solid var(--bd2)}
 .cal .calnote.loc{background:var(--warn-bg);color:var(--warn-tx)}
 .cal td.n .fl{display:block}.cal td.n .fl+.fl{margin-top:4px}
+.etabs{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--bd2)}
+.etabs button{font:inherit;font-size:13px;font-weight:600;color:var(--sub);background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:6px 12px;cursor:pointer}
+.etabs button.on{background:var(--btn-on);color:var(--btn-ontx);border-color:var(--btn-on)}
+.etabs small{font-weight:400;opacity:.75}
+.cal td.e .sub2{display:block;font-size:11.5px;font-weight:400;color:var(--mute);margin-top:1px}
+.cal td.t small{display:block;font-size:10.5px;color:var(--mute)}
+.cal th.n small{display:block;font-weight:400}
+.emore{display:block;width:calc(100% - 24px);margin:10px 12px 0;font:inherit;font-size:13px;font-weight:600;color:var(--acc);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:9px;cursor:pointer}
 .cal .ffx{font-size:10px;color:var(--mute);border:1px solid var(--bd);border-radius:3px;padding:0 3px;font-weight:400}
 .empty{padding:22px 16px;color:var(--mute);font-size:13px;text-align:center}
 
@@ -273,7 +281,7 @@ function render(){
   // 섹션: 맨 앞에 즐겨찾기
   M.sections.forEach(s=>(s.cards||[]).forEach(c=>{ CARDMAP[c.main]={card:c,section:s}; }));
   SECTIONS=[{id:"fav",label:"★ 즐겨찾기",eyebrow:"FAVORITES",note:"이 기기(브라우저)에만 저장",type:"fav",periods:M.periods},...M.sections];
-  document.getElementById("nav").innerHTML=SECTIONS.map((s,i)=>`<button type="button" class="tab${i===1?" on":""}" data-s="${s.id}" aria-expanded="false">${esc(s.label)}${s.type==="calendar"?"":'<span class="cv2">▾</span>'}</button>`).join("");
+  document.getElementById("nav").innerHTML=SECTIONS.map((s,i)=>`<button type="button" class="tab${i===1?" on":""}" data-s="${s.id}" aria-expanded="false">${esc(s.label)}${(s.type==="calendar"||s.type==="earnings")?"":'<span class="cv2">▾</span>'}</button>`).join("");
   const main=document.getElementById("main");
   main.innerHTML=SECTIONS.map(sectionHTML).join("");
   SECTIONS.forEach(s=>{
@@ -313,6 +321,7 @@ function render(){
   });
   setupSubNav();
   if(LOCAL) loadLocalCalendar();
+  if(M.earnings) loadEarnings();
 
   // 메뉴 강조
   const links=[...document.querySelectorAll("#nav .tab")];
@@ -345,8 +354,9 @@ function render(){
 }
 
 function sectionHTML(s){
-  const head=`<div class="sh"><div><div class="ey">${esc(s.eyebrow||"")}</div><h2>${esc(s.label)}<span class="note">${esc(s.note||"")}</span></h2></div>${s.type==="calendar"?"":`<div class="per" id="per-${s.id}" role="group" aria-label="기간 선택"></div>`}</div>`;
+  const head=`<div class="sh"><div><div class="ey">${esc(s.eyebrow||"")}</div><h2>${esc(s.label)}<span class="note">${esc(s.note||"")}</span></h2></div>${(s.type==="calendar"||s.type==="earnings")?"":`<div class="per" id="per-${s.id}" role="group" aria-label="기간 선택"></div>`}</div>`;
   if(s.type==="calendar") return `<section id="${s.id}">${head}${calendarHTML()}</section>`;
+  if(s.type==="earnings") return `<section id="${s.id}">${head}<div class="cal" id="earnBox"><div class="empty">실적발표 일정 불러오는 중…</div></div></section>`;
   if(s.type==="fav") return `<section id="${s.id}">${head}<div id="favBody"></div></section>`;
   const g3=(s.cards||[]).every(c=>!c.lines||c.lines.length<2)&&s.type!=="exports"&&s.id!=="macro";
   return `<section id="${s.id}">${head}<div class="grid${g3?" g3":""}">${(s.cards||[]).map(c=>cardHTML(c,s)).join("")}</div></section>`;
@@ -431,7 +441,7 @@ function setupSubNav(){
   nav.addEventListener("click",e=>{
     const b=e.target.closest(".tab"); if(!b) return;
     const s=SECTIONS.find(x=>x.id===b.dataset.s);
-    if(s.type==="calendar"){ goTo(s.id); return; }
+    if(s.type==="calendar"||s.type==="earnings"){ goTo(s.id); return; }
     if(subOpen===s.id){ closeSub(); return; }
     const pre=s.type==="fav"?"f":"";
     const items=(s.cards||[]).map(c=>`<button type="button" data-go="${pre}c-${c.main}">${esc(c.title||I[c.main].short||I[c.main].name)}</button>`).join("");
@@ -442,6 +452,37 @@ function setupSubNav(){
   subIn.addEventListener("click",e=>{ const b=e.target.closest("[data-go]"); if(b) goTo(b.dataset.go); });
   document.addEventListener("click",e=>{ if(subOpen&&!e.target.closest(".nav")) closeSub(); });
   document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&subOpen) closeSub(); });
+}
+
+// ── 실적발표 (국내 KIND+네이버 컨센서스 / 미국 Nasdaq) ──
+let EARN=null, earnTab="kr", earnAll=false;
+function loadEarnings(){
+  fetch(DATA+"earnings.json",{cache:"no-cache"}).then(r=>r.ok?r.json():null).then(j=>{ if(!j) return; EARN=j; renderEarnings(); })
+    .catch(()=>{ const b=document.getElementById("earnBox"); if(b) b.innerHTML=`<div class="empty">실적발표 일정을 불러오지 못했습니다</div>`; });
+}
+function renderEarnings(){
+  const box=document.getElementById("earnBox"); if(!box||!EARN) return;
+  const W="일월화수목금토", todayK=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
+  const lim=new Date(Date.now()+9*3600e3+7*864e5).toISOString().slice(0,10);
+  const all=EARN[earnTab]||[]; const rows=earnAll?all:all.filter(r=>r.date<=lim);
+  const n0=v=>v==null?"–":fmt(v,0);
+  let head, body="", last="";
+  if(earnTab==="kr") head=`<tr><th>시간</th><th>회사 · 내용</th><th class="n">전년 동기<small>영업이익</small></th><th class="n">컨센서스<small>영업이익</small></th></tr>`;
+  else head=`<tr><th>시점</th><th>종목</th><th class="n">전년 EPS</th><th class="n">EPS 예상</th></tr>`;
+  rows.forEach(r=>{
+    if(r.date!==last){ const d=new Date(r.date+"T00:00:00"); body+=`<tr class="day"><td colspan="4">${r.date.slice(5).replace("-",".")} (${W[d.getDay()]})${r.date===todayK?" · 오늘":""}${earnTab==="us"?" · 미국 날짜":""}</td></tr>`; last=r.date; }
+    if(earnTab==="kr") body+=`<tr><td class="t">${esc(r.time||"–")}</td><td class="e"><b>${esc(r.company)}</b><small class="sub2">${esc(r.title)}</small></td>`+
+      `<td class="n">${n0(r.op_ly)}</td><td class="n">${n0(r.op_cons)}${r.quarter?`<small>${esc(r.quarter)}</small>`:""}</td></tr>`;
+    else body+=`<tr><td class="t">${esc(r.when||"–")}<small>${r.when==="개장 전"?"한국 밤":r.when==="장 마감 후"?"한국 다음날 새벽":""}</small></td>`+
+      `<td class="e"><b>${esc(r.symbol)}</b><small class="sub2">${esc(r.name)} · 시총 ${fmt(r.cap_b,0)}B$</small></td>`+
+      `<td class="n">${esc(r.eps_ly||"–")}</td><td class="n">${esc(r.eps_cons||"–")}${r.n_est?`<small>${esc(r.n_est)}명</small>`:""}</td></tr>`;
+  });
+  const more=all.length>rows.length?`<button type="button" class="emore" data-more="1">더 보기 (${all.length-rows.length}건 더 · ${earnAll?"":"앞으로 "+(earnTab==="kr"?"3주":"2주")})</button>`:(earnAll&&all.length?`<button type="button" class="emore" data-more="0">이번 주만 보기</button>`:"");
+  box.innerHTML=`<div class="etabs" role="tablist">${["kr","us"].map(t=>`<button type="button" role="tab" data-t="${t}" aria-selected="${t===earnTab}" class="${t===earnTab?"on":""}">${t==="kr"?"국내":"미국"} <small>${(EARN[t]||[]).length}건</small></button>`).join("")}</div>`+
+    (rows.length?`<table><thead>${head}</thead><tbody>${body}</tbody></table>`:`<div class="empty">앞으로 7일 안에 일정이 없습니다</div>`)+more+
+    `<div class="calnote">${earnTab==="kr"?"KRX KIND 기업설명회 일정 중 실적발표 · 영업이익 단위 억원(네이버 금융, FnGuide 컨센서스) · 앞으로 7일 먼저 표시":"Nasdaq 실적 캘린더 · 시가총액 300억 달러 이상 · 날짜는 미국 기준(개장 전 = 한국 밤, 장 마감 후 = 한국 다음날 새벽)"} · ${esc(EARN.updated_at)} 갱신</div>`;
+  box.onclick=e=>{ const t=e.target.closest("[data-t]"); if(t){ earnTab=t.dataset.t; earnAll=false; renderEarnings(); return; }
+    const m=e.target.closest("[data-more]"); if(m){ earnAll=m.dataset.more==="1"; renderEarnings(); } };
 }
 
 // ── 내 PC 전용: ForexFactory 컨센서스가 붙은 일정 (공개 페이지에서는 실행 안 됨) ──

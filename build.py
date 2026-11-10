@@ -17,14 +17,15 @@ from pathlib import Path
 
 import yaml
 
-from collectors import brazil, calendar, customs, ecos, fred, sentiment, treasury, yahoo
+from collectors import brazil, calendar, customs, earnings, ecos, fred, sentiment, treasury, yahoo
 from collectors.common import CollectorError, mask, parse_date, today_kst
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "docs" / "data"
 LOGS = ROOT / "logs"
 COLLECTORS = {"ecos": ecos, "fred": fred, "yahoo": yahoo, "bcb": brazil, "tesouro": brazil, "customs": customs,
-              "treasury": treasury, "cnn": sentiment, "alternative": sentiment}
+              "treasury": treasury, "cnn": sentiment, "alternative": sentiment,
+              "stockhub": sentiment}
 
 log = logging.getLogger("market-info")
 
@@ -323,6 +324,23 @@ def main() -> int:
     attach_prev_consensus(events, cfg, inds, objs)
     write_json("calendar", {"updated_at": now_kst(), "events": events})
     cal = [e for e in events if e["date"] <= (today + timedelta(days=21)).isoformat()]
+
+    # 실적발표 일정 (국내 KIND + 네이버 컨센서스, 미국 Nasdaq)
+    earn_info = None
+    if (cfg.get("earnings") or {}).get("enabled"):
+        log.info("실적발표 일정 수집")
+        earn, earn_err = earnings.collect(cfg, today)
+        for e in earn_err:
+            failed.append({"id": "earnings", "name": "실적발표", "error": mask(e)[:200]})
+            log.warning("  ✗ %s", mask(e)[:200])
+        old_earn = read_json("earnings") or {}
+        for k in ("kr", "us"):                              # 실패한 쪽은 지난 데이터 유지
+            if not earn[k] and old_earn.get(k):
+                earn[k] = [r for r in old_earn[k] if r["date"] >= today.isoformat()]
+        write_json("earnings", {"updated_at": now_kst(), **earn})
+        earn_info = {"kr": len(earn["kr"]), "us": len(earn["us"]), "updated_at": now_kst()}
+        log.info("  ✓ 국내 %d건(컨센서스 %d건), 미국 %d건", len(earn["kr"]),
+                 sum(1 for r in earn["kr"] if r.get("op_cons") is not None), len(earn["us"]))
     log.info("  ✓ 일정 %d건 (3주 이내 %d건)", len(events), len(cal))
     manifest = {
         "site": cfg["site"],
@@ -331,6 +349,7 @@ def main() -> int:
         "updated_at": now_kst(),
         "failed": failed,
         "calendar": cal,
+        "earnings": earn_info,
         "sources": cfg["sources"],
         "indicators": {
             i["id"]: {

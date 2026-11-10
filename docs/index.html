@@ -471,7 +471,7 @@ function renderEarnings(){
   else head=`<tr><th>시점</th><th>종목</th><th class="n">전년 EPS</th><th class="n">EPS 예상</th></tr>`;
   rows.forEach(r=>{
     if(r.date!==last){ const d=new Date(r.date+"T00:00:00"); body+=`<tr class="day"><td colspan="4">${r.date.slice(5).replace("-",".")} (${W[d.getDay()]})${r.date===todayK?" · 오늘":""}${earnTab==="us"?" · 미국 날짜":""}</td></tr>`; last=r.date; }
-    if(earnTab==="kr") body+=`<tr><td class="t">${esc(r.time||"–")}</td><td class="e"><b>${esc(r.company)}</b><small class="sub2">${esc(r.title)}</small></td>`+
+    if(earnTab==="kr") body+=`<tr><td class="t">${esc(r.time||"–")}</td><td class="e">${r.market?`<span class="cty">${esc(r.market)}</span>`:""}<b>${esc(r.company)}</b><small class="sub2">${esc(r.title)}</small></td>`+
       `<td class="n">${n0(r.op_ly)}</td><td class="n">${n0(r.op_cons)}${r.quarter?`<small>${esc(r.quarter)}</small>`:""}</td></tr>`;
     else body+=`<tr><td class="t">${esc(r.when||"–")}<small>${r.when==="개장 전"?"한국 밤":r.when==="장 마감 후"?"한국 다음날 새벽":""}</small></td>`+
       `<td class="e"><b>${esc(r.symbol)}</b><small class="sub2">${esc(r.name)} · 시총 ${fmt(r.cap_b,0)}B$</small></td>`+

@@ -45,17 +45,21 @@ def kr_schedule(start: date, end: date, max_pages: int = 10) -> list[dict]:
         trs = re.findall(r"<tr[^>]*>(.*?)</tr>", text, re.S)
         got = 0
         for tr in trs:
-            c = _cells(tr)
-            if len(c) < 5 or not re.match(r"\d{4}-\d{2}-\d{2}", c[-1]):
+            c = _cells(tr)          # [번호, 회사, 제목, 장소, 날짜, 시간]
+            di = next((i for i, x in enumerate(c) if re.fullmatch(r"\d{4}-\d{2}-\d{2}", x)), None)
+            if di is None or di < 3:
                 continue
             if not seen_log:
-                log.info("  KIND 행 예시: %s | %s", c, re.findall(r"\d{6}", tr)[:3])
+                log.info("  KIND 행 예시: %s", c)
                 seen_log = True
             got += 1
-            dt = c[-1]
-            code = (re.findall(r"(?:isurCd|repIsuSrtCd|companyCode|['\"])\s*[:=,(]?\s*['\"]?A?(\d{6})", tr) or re.findall(r"\b(\d{6})\b", tr) or [""])[0]
-            rows.append({"company": c[1], "title": c[2], "place": c[3], "date": dt[:10],
-                         "time": dt[11:16].replace("--:--", "") if len(dt) > 10 else "", "code": code})
+            tm = c[di + 1] if di + 1 < len(c) else ""
+            isur = re.search(r"companysummary_open\('(\d{5})'\)", tr)        # KIND 회사코드 5자리 → 보통주 종목코드 = 뒤에 0
+            mkt = re.search(r"alt='(유가증권|코스닥|코넥스)'", tr)
+            rows.append({"company": c[1], "title": c[2], "place": c[3], "date": c[di],
+                         "time": tm if re.fullmatch(r"\d{1,2}:\d{2}", tm) else "",
+                         "code": (isur.group(1) + "0") if isur else "",
+                         "market": {"유가증권": "코스피", "코스닥": "코스닥", "코넥스": "코넥스"}.get(mkt.group(1), "") if mkt else ""})
         if page == 1 and got == 0:                      # 표 구조가 바뀐 경우 원인 파악용
             log.warning("  KIND 행을 못 읽음: tr %d개, 예시 %s", len(trs), [re.sub(r"\s+", " ", t)[:400] for t in trs[1:3]])
         if got < 100:

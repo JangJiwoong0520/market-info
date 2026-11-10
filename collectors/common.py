@@ -21,12 +21,13 @@ class CollectorError(Exception):
     """수집 실패 (해당 지표만 건너뛰고 계속 진행)."""
 
 
-def get(url: str, params: dict | None = None, timeout: int = 60, retries: int = 3) -> requests.Response:
+def get(url: str, params: dict | None = None, timeout: int = 60, retries: int = 3,
+        headers: dict | None = None) -> requests.Response:
     """GET 요청. 네트워크 오류·5xx·429는 2s, 4s, 8s 간격으로 재시도 (4xx는 재시도 안 함)."""
     last = ""
     for i in range(retries + 1):
         try:
-            r = _session.get(url, params=params, timeout=timeout)
+            r = _session.get(url, params=params, timeout=timeout, headers=headers)
         except requests.RequestException as e:
             last = f"연결 오류 {type(e).__name__}"
         else:

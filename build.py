@@ -17,14 +17,14 @@ from pathlib import Path
 
 import yaml
 
-from collectors import brazil, calendar, customs, ecos, fred, treasury, yahoo
+from collectors import brazil, calendar, customs, ecos, fred, sentiment, treasury, yahoo
 from collectors.common import CollectorError, mask, parse_date, today_kst
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "docs" / "data"
 LOGS = ROOT / "logs"
 COLLECTORS = {"ecos": ecos, "fred": fred, "yahoo": yahoo, "bcb": brazil, "tesouro": brazil, "customs": customs,
-              "treasury": treasury}
+              "treasury": treasury, "cnn": sentiment, "alternative": sentiment}
 
 log = logging.getLogger("market-info")
 
@@ -212,6 +212,13 @@ def summarize(ind: dict, obj: dict) -> dict:
             "YTD": change(kind, v, value_at_or_before(s, f"{d.year - 1}-12-31")),
         }
         out["prev_date"] = prev[0] if prev else None
+    elif kind == "gauge":                                  # 공포·탐욕 (0~100): 과거 시점 값과 비교
+        d = parse_date(k)
+        def at(dd: date):
+            r = value_at_or_before(s, dd.isoformat())
+            return r[1] if r else None
+        out["cmp"] = {"1D": s[-2][1] if len(s) > 1 else None, "1W": at(d - timedelta(days=7)),
+                      "1M": at(d - timedelta(days=30)), "1Y": at(d.replace(year=d.year - 1))}
     elif kind == "macro":
         out["prev"] = s[-2][1] if len(s) > 1 else None
     elif kind == "export":
@@ -301,6 +308,16 @@ def main() -> int:
     for e in cal_err:
         failed.append({"id": "calendar", "name": "주요 일정", "error": mask(e)[:200]})
         log.warning("  ✗ %s", mask(e)[:200])
+    if (cfg.get("calendar_auto") or {}).get("forexfactory"):
+        try:                                               # ForexFactory 이번 주 컨센서스(이전·예상) 붙이기
+            from local_view import FF_URL, merge as ff_merge
+            from collectors.common import get as http_get
+            ff = http_get(FF_URL, headers={"User-Agent": "market-info/1.0"}).json()
+            events = ff_merge(events, ff, today.isoformat())
+            log.info("  ✓ ForexFactory 컨센서스 %d건 연결", sum(1 for e in events if e.get("ff")))
+        except Exception as e:  # noqa: BLE001
+            failed.append({"id": "forexfactory", "name": "일정 컨센서스", "error": mask(str(e))[:200]})
+            log.warning("  ✗ ForexFactory: %s", mask(str(e))[:200])
     attach_prev_consensus(events, cfg, inds, objs)
     write_json("calendar", {"updated_at": now_kst(), "events": events})
     cal = [e for e in events if e["date"] <= (today + timedelta(days=21)).isoformat()]

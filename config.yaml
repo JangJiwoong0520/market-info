@@ -18,7 +18,7 @@ site:
 history_start: "2000-01-01"
 
 # 상단 요약 띠에 보일 지표 (순서대로)
-ticker: [kospi, kosdaq, spx, nasdaq, usdkrw, jpykrw, kr10y, us10y, wti, gold, btc]
+ticker: [kospi, kosdaq, spx, nasdaq, vix, cnn_fg, usdkrw, jpykrw, kr10y, us10y, wti, gold, btc]
 
 # 기간 버튼
 periods: ["1Y", "3Y", "5Y", "10Y", "20Y", "YTD"]
@@ -32,6 +32,8 @@ sources:
   tesouro: { name: 브라질 국고청, url: "https://www.tesourotransparente.gov.br" }
   customs: { name: 관세청, url: "https://www.data.go.kr/data/15101609/openapi.do" }
   derived: { name: 한국은행·브라질 중앙은행, url: "" }
+  cnn:     { name: CNN, url: "https://edition.cnn.com/markets/fear-and-greed" }
+  alternative: { name: alternative.me, url: "https://alternative.me/crypto/fear-and-greed-index/" }
 
 # ── 지표 목록 ──────────────────────────────────────────────
 indicators:
@@ -68,6 +70,11 @@ indicators:
   - { id: wti,    name: "WTI 유가 ($/배럴, 선물)", short: WTI, source: yahoo, symbol: "CL=F", unit: "$", kind: level, decimals: 2, public: true }   # FRED(EIA 현물)는 약 1주 지연
   - { id: gold,   name: "금 ($/온스, 선물)", short: 금, source: yahoo, symbol: "GC=F", unit: "$", kind: level, decimals: 1, public: true }
   - { id: btc,    name: 비트코인 ($), short: 비트코인, source: yahoo, symbol: "BTC-USD", unit: "$", kind: level, decimals: 0, public: true }
+
+  # 심리 지표 (개인 참고용 — 문제가 되면 public: false)
+  - { id: vix,       name: VIX 변동성 지수, short: VIX, source: yahoo, symbol: "^VIX", unit: pt, kind: level, decimals: 2, public: true }
+  - { id: cnn_fg,    name: 美 공포·탐욕 지수 (CNN), short: 美 공포탐욕, source: cnn, unit: 점, kind: gauge, decimals: 0, public: true }
+  - { id: crypto_fg, name: 코인 공포·탐욕 지수, short: 코인 공포탐욕, source: alternative, unit: 점, kind: gauge, decimals: 0, public: true }
 
   # 경제지표 (월간)
   - { id: us_cpi,      name: 美 소비자물가 (전년비), short: CPI, source: fred, series: CPIAUCSL, units: pc1, cycle: M, unit: "%", kind: macro, decimals: 1 }
@@ -125,6 +132,15 @@ sections:
       - { main: wti }
       - { main: gold }
       - { main: btc }
+  - id: sentiment
+    label: 심리지표
+    eyebrow: SENTIMENT
+    note: VIX · 공포·탐욕 (0 극단적 공포 ~ 100 극단적 탐욕)
+    periods: ["1Y", "3Y", "5Y", "10Y", "20Y", "YTD"]
+    cards:
+      - { main: vix }
+      - { main: cnn_fg, range: [0, 100] }
+      - { main: crypto_fg, range: [0, 100] }
   - id: calendar
     label: 주요 일정
     eyebrow: CALENDAR
@@ -178,6 +194,7 @@ calendar_auto:
     - { release_id: 54, event: 개인소득·지출(PCE 물가), time_et: "08:30", importance: 2, prev: us_core_pce, prev_note: 근원 전년비 }
     - { release_id: 53, event: GDP, time_et: "08:30", importance: 2, prev: us_gdp, prev_note: 연율 }
   copom: true          # 브라질 중앙은행 공식 달력 API
+  forexfactory: true   # ForexFactory 이번 주 컨센서스(이전·예상) — 개인 참고용 (끄려면 false)
 
 # 컨센서스(예상치) — 직접 입력. 같은 날짜 + 일정 이름에 match 글자가 들어간 일정에 붙는다.
 #  ※ ForexFactory·Investing.com은 자동 접속을 차단하고 있어 자동 수집하지 않는다 (2026-11-09 확인).

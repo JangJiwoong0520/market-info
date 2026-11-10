@@ -15,7 +15,6 @@
   --hd:#0d1b33;--hd2:#13264a;--hdtx:#ffffff;--hdsub:#9fb0cf;--acc:#3d5a99;
   --up:#d42f2f;--dn:#1e64d0;--flat:#8b94a3;
   --s1:#1e3a8a;--s2:#0f8a7e;--s3:#c2620a;--sp:#8b94a3;--bar:#9fb0cf;--bar2:#3d5a99;
-  --t1:#4338ca;--t2:#0f8a7e;--t3:#c2620a;--t4:#a21caf;--t5:#0369a1;
   --fg1:#1e5bc6;--fg2:#8db3ec;--fg3:#c4cad4;--fg4:#f0a19b;--fg5:#cf2e2e;--mk:#111a2b;
   --tip:#0d1b33;--tiptx:#fff;--warn-bg:#fff4e0;--warn-tx:#8a5300;--btn-on:#0d1b33;--btn-ontx:#fff;
 }
@@ -27,7 +26,6 @@
     --hd:#0e1522;--hd2:#141e30;--hdtx:#e6ebf2;--hdsub:#7d8da6;--acc:#8fa9ff;
     --up:#ff6b63;--dn:#5b9dff;--flat:#6c788b;
     --s1:#a5b4fc;--s2:#2dd4bf;--s3:#fbbf24;--sp:#9aa6b8;--bar:#6a80b0;--bar2:#c3d1ff;
-    --t1:#a5b4fc;--t2:#2dd4bf;--t3:#fbbf24;--t4:#f0abfc;--t5:#7dd3fc;
     --fg1:#3b82f6;--fg2:#93c5fd;--fg3:#6b7280;--fg4:#fca5a5;--fg5:#ef4444;--mk:#f8fafc;
     --tip:#24324a;--tiptx:#e6ebf2;--warn-bg:#2b2213;--warn-tx:#f3c375;--btn-on:#e6ebf2;--btn-ontx:#0b0f16;
   }
@@ -39,7 +37,6 @@
   --hd:#0e1522;--hd2:#141e30;--hdtx:#e6ebf2;--hdsub:#7d8da6;--acc:#8fa9ff;
   --up:#ff6b63;--dn:#5b9dff;--flat:#6c788b;
   --s1:#a5b4fc;--s2:#2dd4bf;--s3:#fbbf24;--sp:#9aa6b8;--bar:#6a80b0;--bar2:#c3d1ff;
-    --t1:#a5b4fc;--t2:#2dd4bf;--t3:#fbbf24;--t4:#f0abfc;--t5:#7dd3fc;
     --fg1:#3b82f6;--fg2:#93c5fd;--fg3:#6b7280;--fg4:#fca5a5;--fg5:#ef4444;--mk:#f8fafc;
   --tip:#24324a;--tiptx:#e6ebf2;--warn-bg:#2b2213;--warn-tx:#f3c375;--btn-on:#e6ebf2;--btn-ontx:#0b0f16;
 }
@@ -298,8 +295,7 @@ function render(){
   }
 
   // 섹션: 맨 앞에 즐겨찾기
-  let tone=0;
-  M.sections.forEach(s=>(s.cards||[]).forEach(c=>{ CARDMAP[c.main]={card:c,section:s}; if(!c.tone) c.tone=`--t${tone++%5+1}`; }));
+  M.sections.forEach(s=>(s.cards||[]).forEach(c=>{ CARDMAP[c.main]={card:c,section:s}; if(!c.tone) c.tone="--s1"; }));   // 단일 그래프는 기본 톤 하나로 통일
   SECTIONS=[{id:"fav",label:"★ 즐겨찾기",eyebrow:"FAVORITES",note:"이 기기(브라우저)에만 저장",type:"fav",periods:M.periods},...M.sections];
   document.getElementById("nav").innerHTML=SECTIONS.map((s,i)=>`<button type="button" class="tab${i===1?" on":""}" data-s="${s.id}" aria-expanded="false">${esc(s.label)}${(s.type==="calendar"||s.type==="earnings")?"":'<span class="cv2">▾</span>'}</button>`).join("");
   const main=document.getElementById("main");
@@ -420,7 +416,7 @@ function cardHTML(card,s,pre=""){
   }
   const st=lineStyle(card);
   let lg="";
-  if(s.type==="exports") lg=`<div class="lg"><span><i class="b" style="background:var(${card.tone||"--bar"});opacity:.45"></i>월 수출</span><span><i style="color:var(${card.tone||"--bar2"})"></i>12개월 평균</span></div>`;
+  if(s.type==="exports") lg=`<div class="lg"><span><i class="b" style="background:var(${card.tone||"--s1"});opacity:.45"></i>월 수출</span><span><i style="color:var(--s3)"></i>12개월 평균</span></div>`;
   else if(multi) lg=`<div class="lg" data-card="${card.main}">${card.lines.map(id=>{ const off=isHidden(card,id); return `<button type="button" data-line="${id}" class="${off?"off":""}" aria-pressed="${!off}" title="눌러서 선 켜기/끄기"><i class="${st[id].dash?"d":""}" style="color:var(${st[id].color})"></i>${esc(I[id].short)} <b>${fmtVal(I[id],(I[id].summary||{}).value)}</b></button>`; }).join("")}</div>`;
   const src=I[card.main].source;
   const fav=getFav().includes(card.main);
@@ -669,9 +665,9 @@ function drawChart(c){
     const s=lines[0]; const n=s.pts.length; const slot=(W-padL-padR)/Math.max(n,1);
     const bw=Math.max(1,Math.min(24,slot-(slot>4?2:0))); const y0=Y(0);
     s.pts.forEach(p=>{ const x=X(toT(p[0]))-bw/2, y=Y(p[1]); const top=Math.min(y,y0), h=Math.max(1,Math.abs(y0-y));
-      svg+=`<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${bw>6?2:0}" style="fill:var(${card.tone||"--s1"})" opacity="${isExp?".55":".8"}"/>`; });
+      svg+=`<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${bw>6?2:0}" style="fill:var(${card.tone||"--s1"})" opacity="${isExp?".45":".8"}"/>`; });
     svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y0}" y2="${y0}" style="stroke:var(${"--mute"})" stroke-width="1"/>`;
-    if(avg&&avg.length) svg+=`<path d="${avg.map((p,i)=>(i?"L":"M")+X(toT(p[0])).toFixed(1)+","+Y(p[1]).toFixed(1)).join("")}" fill="none" style="stroke:var(${card.tone||"--bar2"})" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if(avg&&avg.length) svg+=`<path d="${avg.map((p,i)=>(i?"L":"M")+X(toT(p[0])).toFixed(1)+","+Y(p[1]).toFixed(1)).join("")}" fill="none" style="stroke:var(--s3)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
   }else{
     // 선 (점선·계단식 먼저 → 실선을 위에)
     const order=[...lines].sort((a,b)=>(b.style.dash?1:0)-(a.style.dash?1:0));
@@ -700,7 +696,7 @@ function drawChart(c){
 
   // ── 터치·마우스 툴팁 ──
   const tip=el.querySelector(".tip"), hov=el.querySelector(".hov"), svgEl=el.querySelector("svg");
-  const ser=isExp?[{lab:"월 수출",color:card.tone||"--bar",pts:lines[0].pts,ind:lines[0].ind},{lab:"12개월 평균",color:card.tone||"--bar2",pts:avg||[],ind:lines[0].ind}]
+  const ser=isExp?[{lab:"월 수출",color:card.tone||"--bar",pts:lines[0].pts,ind:lines[0].ind},{lab:"12개월 평균",color:"--s3",pts:avg||[],ind:lines[0].ind}]
            :lines.map(l=>({lab:l.ind.short,color:l.style.color,pts:l.pts,ind:l.ind,step:l.ind.step}));
   const allKeys=[...new Set(ser.flatMap(s=>s.pts.map(p=>p[0])))].sort();
   function valAt(s,key){ let lo2=0,hi2=s.pts.length-1,a=null; while(lo2<=hi2){const m=(lo2+hi2)>>1; if(s.pts[m][0]<=key){a=s.pts[m];lo2=m+1;}else hi2=m-1;} return a&&(s.step||a[0]===key||key.length===7?a: (toT(key)-toT(a[0])<6*864e5?a:null)); }

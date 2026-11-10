@@ -7,6 +7,7 @@
 #  kind: level    → 변화율을 %로 표시 (지수·환율·가격)
 #  kind: macro    → 월간 발표치, "이전 값"과 비교
 #  step: true     → 기준금리처럼 계단식 (값이 바뀐 날만 저장)
+#  intraday: 기호  → 1일(1D) 차트용 Yahoo 장중 5분 데이터
 # ─────────────────────────────────────────────────────────────
 
 site:
@@ -21,7 +22,7 @@ history_start: "2000-01-01"
 ticker: [kospi, kosdaq, spx, nasdaq, vix, cnn_fg, usdkrw, jpykrw, kr10y, us10y, wti, gold, btc]
 
 # 기간 버튼
-periods: ["1Y", "3Y", "5Y", "10Y", "20Y", "YTD"]
+periods: ["1D", "1W", "1M", "3M", "1Y", "3Y", "5Y", "10Y", "20Y", "YTD"]   # 1D = 장중(5분, 최근 24시간)
 
 sources:
   ecos:    { name: 한국은행, url: "https://ecos.bok.or.kr" }
@@ -51,7 +52,7 @@ indicators:
   - { id: us_fed, name: 美 기준금리(상단), short: 기준금리(상단), source: fred, series: DFEDTARU, unit: "%", kind: rate, decimals: 2, step: true }
   # 美국채: 미 재무부 일일 금리 (FRED DGS2·10·30과 같은 숫자, 재무부는 당일 바로 게시 — FRED는 하루 늦음)
   - { id: us2y,  name: 美국채 2년,  short: 2년,  source: treasury, column: "2 Yr",  unit: "%", kind: rate, decimals: 2 }
-  - { id: us10y, name: 美국채 10년, short: 10년, source: treasury, column: "10 Yr", unit: "%", kind: rate, decimals: 2 }
+  - { id: us10y, name: 美국채 10년, short: 10년, source: treasury, column: "10 Yr", unit: "%", kind: rate, decimals: 2, intraday: "^TNX" }
   - { id: us30y, name: 美국채 30년, short: 30년, source: treasury, column: "30 Yr", unit: "%", kind: rate, decimals: 2 }
   - { id: us_t10y2y, name: 美 장단기 금리차 (10년−2년), short: 美 10Y−2Y, source: derived, formula: [us10y, "-", us2y], source_name: "미 재무부 계산", unit: "%p", kind: rate, decimals: 2 }
 
@@ -60,23 +61,23 @@ indicators:
   - { id: br10y, name: 브라질 국채 10년(근사), short: 10년 근사(NTN-F), source: tesouro, title_type: "Tesouro Prefixado com Juros Semestrais", target_years: 10, unit: "%", kind: rate, decimals: 2 }
 
   # 환율
-  - { id: usdkrw, name: 원/달러, source: ecos, stat: 731Y001, item: "0000001", cycle: D, unit: 원, kind: level, decimals: 1 }
-  - { id: jpykrw, name: 원/100엔, source: ecos, stat: 731Y001, item: "0000002", cycle: D, unit: 원, kind: level, decimals: 2 }
+  - { id: usdkrw, name: 원/달러, source: ecos, stat: 731Y001, item: "0000001", cycle: D, unit: 원, kind: level, decimals: 1, intraday: "KRW=X" }
+  - { id: jpykrw, name: 원/100엔, source: ecos, stat: 731Y001, item: "0000002", cycle: D, unit: 원, kind: level, decimals: 2, intraday: "JPYKRW=X", intraday_scale: 100 }
   - { id: usdbrl, name: 달러/헤알, source: bcb, sgs: 1, unit: 헤알, kind: level, decimals: 4, hidden: true }   # 원/헤알 계산용
   - { id: brlkrw, name: 원/헤알, source: derived, formula: [usdkrw, "/", usdbrl], unit: 원, kind: level, decimals: 2 }
-  - { id: dxy,    name: 달러인덱스 (DXY), short: DXY, source: yahoo, symbol: "DX-Y.NYB", unit: pt, kind: level, decimals: 2, public: true }
+  - { id: dxy,    name: 달러인덱스 (DXY), short: DXY, source: yahoo, symbol: "DX-Y.NYB", unit: pt, kind: level, decimals: 2, public: true, intraday: "DX-Y.NYB" }
 
   # 주식·원자재·코인
-  - { id: kospi,  name: 코스피, source: ecos, stat: 802Y001, item: "0001000", cycle: D, unit: pt, kind: level, decimals: 2 }
-  - { id: kosdaq, name: 코스닥, source: ecos, stat: 802Y001, item: "0089000", cycle: D, unit: pt, kind: level, decimals: 2 }
-  - { id: spx,    name: S&P 500,    source: yahoo, symbol: "^GSPC",  unit: pt, kind: level, decimals: 2, public: true }
-  - { id: nasdaq, name: 나스닥 종합, source: yahoo, symbol: "^IXIC",  unit: pt, kind: level, decimals: 2, public: true }
-  - { id: wti,    name: "WTI 유가 ($/배럴, 선물)", short: WTI, source: yahoo, symbol: "CL=F", unit: "$", kind: level, decimals: 2, public: true }   # FRED(EIA 현물)는 약 1주 지연
-  - { id: gold,   name: "금 ($/온스, 선물)", short: 금, source: yahoo, symbol: "GC=F", unit: "$", kind: level, decimals: 1, public: true }
-  - { id: btc,    name: 비트코인 ($), short: 비트코인, source: yahoo, symbol: "BTC-USD", unit: "$", kind: level, decimals: 0, public: true }
+  - { id: kospi,  name: 코스피, source: ecos, stat: 802Y001, item: "0001000", cycle: D, unit: pt, kind: level, decimals: 2, intraday: "^KS11" }
+  - { id: kosdaq, name: 코스닥, source: ecos, stat: 802Y001, item: "0089000", cycle: D, unit: pt, kind: level, decimals: 2, intraday: "^KQ11" }
+  - { id: spx,    name: S&P 500,    source: yahoo, symbol: "^GSPC",  unit: pt, kind: level, decimals: 2, public: true, intraday: "^GSPC" }
+  - { id: nasdaq, name: 나스닥 종합, source: yahoo, symbol: "^IXIC",  unit: pt, kind: level, decimals: 2, public: true, intraday: "^IXIC" }
+  - { id: wti,    name: "WTI 유가 ($/배럴, 선물)", short: WTI, source: yahoo, symbol: "CL=F", unit: "$", kind: level, decimals: 2, public: true, intraday: "CL=F" }   # FRED(EIA 현물)는 약 1주 지연
+  - { id: gold,   name: "금 ($/온스, 선물)", short: 금, source: yahoo, symbol: "GC=F", unit: "$", kind: level, decimals: 1, public: true, intraday: "GC=F" }
+  - { id: btc,    name: 비트코인 ($), short: 비트코인, source: yahoo, symbol: "BTC-USD", unit: "$", kind: level, decimals: 0, public: true, intraday: "BTC-USD" }
 
   # 심리 지표 (개인 참고용 — 문제가 되면 public: false)
-  - { id: vix,       name: VIX 변동성 지수, short: VIX, source: yahoo, symbol: "^VIX", unit: pt, kind: level, decimals: 2, public: true }
+  - { id: vix,       name: VIX 변동성 지수, short: VIX, source: yahoo, symbol: "^VIX", unit: pt, kind: level, decimals: 2, public: true, intraday: "^VIX" }
   - { id: cnn_fg,    name: 美 공포·탐욕 지수 (CNN), short: 美 공포탐욕, source: cnn, unit: 점, kind: gauge, decimals: 0, public: true }
   - { id: kr_fg,     name: 韓 공포·탐욕 지수 (StockHub), short: 韓 공포탐욕, source: stockhub, field: kr, unit: 점, kind: gauge, decimals: 0, public: true }   # 최근 30일만 제공 → 매일 누적
   - { id: crypto_fg, name: 코인 공포·탐욕 지수, short: 코인 공포탐욕, source: alternative, unit: 점, kind: gauge, decimals: 0, public: true }
@@ -141,7 +142,7 @@ sections:
     label: 심리지표
     eyebrow: SENTIMENT
     note: VIX · 공포·탐욕 (0 극단적 공포 ~ 100 극단적 탐욕) · CNN은 최근 1년부터 누적
-    periods: ["1Y", "3Y", "5Y", "10Y", "20Y", "YTD"]
+    periods: ["1D", "1W", "1M", "3M", "1Y", "3Y", "5Y", "10Y", "20Y", "YTD"]
     default_period: 1Y
     cards:
       - { main: vix }

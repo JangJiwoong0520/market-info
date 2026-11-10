@@ -98,7 +98,7 @@ section{padding:26px 0 6px}
 .per button{font:inherit;font-size:12.5px;font-weight:600;color:var(--sub);background:none;border:0;border-right:1px solid var(--bd);padding:7px 11px;cursor:pointer;min-width:42px}
 .per button:last-child{border-right:0}
 .per button.on{background:var(--btn-on);color:var(--btn-ontx)}
-@media (max-width:560px){.per{margin-left:0;width:100%}.per button{flex:1;padding:8px 0;min-width:0}}
+@media (max-width:560px){.per{margin-left:0;width:100%}.per button{flex:1;padding:8px 0;min-width:0;font-size:12px;letter-spacing:-.3px}}
 
 .grid{display:grid;grid-template-columns:1fr;gap:12px}
 @media (min-width:860px){.grid{grid-template-columns:1fr 1fr}}
@@ -257,7 +257,7 @@ function toggleLine(main,id){
 // ── 숫자·날짜 형식 ─────────────────────────────────
 function fmt(v,dec){ if(v==null||isNaN(v)) return "–"; return Number(v).toLocaleString("ko-KR",{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
 function fmtVal(ind,v){ const u=ind.unit; const s=fmt(v,ind.decimals); if(u==="점") return s; return u==="%"?s+"%":u==="%p"?s+"%p":u==="억$"?s+"억$":u==="천명"?s+"천명":s; }
-function fmtDate(d){ if(!d) return "–"; return d.length===7? d.replace("-","."): d.slice(2).replace(/-/g,"."); }
+function fmtDate(d){ if(!d) return "–"; if(d.length>10) return d.slice(5,10).replace("-",".")+" "+d.slice(11,16); return d.length===7? d.replace("-","."): d.slice(2).replace(/-/g,"."); }
 function dir(x){ return x==null?"flat": x>0?"up": x<0?"dn":"flat"; }
 function arrow(x){ return x>0?"▲":x<0?"▼":"–"; }
 function fmtChg(kind,x,long){
@@ -307,7 +307,7 @@ function render(){
     if(s.default_period) PERIOD[s.id]=s.default_period;
     const box=document.getElementById("per-"+s.id);
     if(box){
-      box.innerHTML=periods.map(p=>`<button type="button" data-p="${p}"${p===PERIOD[s.id]?" class=on":""}>${p==="YTD"?"YTD":p.replace("Y","년")}</button>`).join("");
+      box.innerHTML=periods.map(p=>`<button type="button" data-p="${p}"${p===PERIOD[s.id]?" class=on":""}>${PLABEL[p]||p.replace("Y","년")}</button>`).join("");
       box.onclick=e=>{ const b=e.target.closest("button"); if(!b) return;
         PERIOD[s.id]=b.dataset.p; box.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
         CHARTS.filter(c=>c.section.id===s.id&&c.drawn).forEach(queueDraw); };
@@ -581,11 +581,19 @@ function startKey(period,lastKey){
   const monthly=lastKey.length===7;
   const y=+lastKey.slice(0,4), m=+lastKey.slice(5,7), d=monthly?1:+lastKey.slice(8,10);
   if(period==="YTD") return monthly?`${y}-01`:`${y}-01-01`;
-  const n=parseInt(period); const sy=y-n;
-  const p=v=>String(v).padStart(2,"0");
-  return monthly?`${sy}-${p(m)}`:`${sy}-${p(m)}-${p(d)}`;
+  const n=parseInt(period), u=period.slice(-1), dt=new Date(Date.UTC(y,m-1,d));
+  if(u==="Y") dt.setUTCFullYear(y-n); else if(u==="M") dt.setUTCMonth(m-1-n); else if(u==="W") dt.setUTCDate(d-7*n); else dt.setUTCDate(d-n);
+  const s=dt.toISOString().slice(0,10);
+  return monthly?s.slice(0,7):s;
 }
-const toT=k=>Date.UTC(+k.slice(0,4),+k.slice(5,7)-1,k.length===7?15:+k.slice(8,10));
+// 날짜 키 → 시각 (장중 키 'YYYY-MM-DDTHH:MM'은 한국시간 그대로 숫자로)
+const toT=k=>Date.UTC(+k.slice(0,4),+k.slice(5,7)-1,k.length===7?15:+k.slice(8,10),k.length>10?+k.slice(11,13):0,k.length>10?+k.slice(14,16):0);
+const PLABEL={"1D":"1일","1W":"1주","1M":"1달","3M":"3달","YTD":"YTD"};
+let INTRA=null, INTRA_P=null;     // 1일(1D) 장중 데이터 — 처음 1일을 누를 때 불러옴
+function loadIntra(){
+  if(!INTRA_P) INTRA_P=fetch(DATA+"intraday.json",{cache:"no-cache"}).then(r=>r.ok?r.json():{series:{}}).catch(()=>({series:{}})).then(j=>(INTRA=j));
+  return INTRA_P;
+}
 
 // ── 차트 그리기 (SVG) ─────────────────────────────
 function niceTicks(lo,hi,n){
@@ -609,15 +617,22 @@ function thin(pts,maxN){   // 픽셀보다 점이 많으면 구간별 최소·�
 
 function drawChart(c){
   const {el,card,section}=c, I=M.indicators;
-  const isExp=(c.srcType||section.type)==="exports", isBar=card.chart==="bar";
+  const intraMode=PERIOD[section.id]==="1D";
+  const isExp=!intraMode&&(c.srcType||section.type)==="exports", isBar=!intraMode&&card.chart==="bar";
   const W=el.clientWidth, H=el.clientHeight; if(!W) return;
   const padL=16, padT=10, padB=22;
   const st=lineStyle(card);
   const mainS=SERIES[card.main]||[]; if(!mainS.length){ el.innerHTML=`<div class="msg">데이터 없음</div>`; return; }
+  let ip=null;
+  if(intraMode){                    // 1일: 장중 5분 데이터 (최근 24시간)
+    if(!INTRA){ el.innerHTML=`<div class="msg">장중 데이터 불러오는 중…</div>`; loadIntra().then(()=>queueDraw(c)); return; }
+    ip=(INTRA.series||{})[card.main];
+    if(!ip||ip.length<2){ el.innerHTML=`<div class="msg">이 지표는 하루 단위 데이터만 있어요<br>(1일 장중 차트 없음)</div>`; return; }
+  }
   // 기간 기준: 카드 안 시리즈 중 가장 늦은 날짜
-  const lastKey=card.lines.map(id=>(SERIES[id]||[]).slice(-1)[0]?.[0]||"").sort().pop();
-  const sk=startKey(PERIOD[section.id],lastKey);
-  const lines=card.lines.filter(id=>!isHidden(card,id)).map(id=>{
+  const lastKey=intraMode?ip[ip.length-1][0]:card.lines.map(id=>(SERIES[id]||[]).slice(-1)[0]?.[0]||"").sort().pop();
+  const sk=intraMode?ip[0][0]:startKey(PERIOD[section.id],lastKey);
+  const lines=intraMode?[{id:card.main,ind:I[card.main],pts:ip,style:st[card.main]||{color:"--s1",dash:false}}]:card.lines.filter(id=>!isHidden(card,id)).map(id=>{
     const all=SERIES[id]||[]; const ind=I[id];
     let pts=all.filter(p=>p[0]>=sk);
     if(ind.step){   // 계단식: 시작 직전 값으로 시작점 채움
@@ -652,11 +667,14 @@ function drawChart(c){
   let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(card.title||I[card.main].name)} 차트">`;
   ticks.forEach(v=>{ const y=Y(v); svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y}" y2="${y}" style="stroke:var(${"--grid"})" stroke-width="1"/><text class="ax" x="${W-padR+6}" y="${y+3.5}">${tickLab(v)}</text>`; });
   if(card.range){ [[25,"극단적 공포"],[75,"극단적 탐욕"]].forEach(([v,lab])=>{ const y=Y(v); svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y}" y2="${y}" style="stroke:var(--mute)" stroke-width="1" stroke-dasharray="3 4"/><text class="ax" x="${padL+2}" y="${v<50?y+12:y-4}">${lab}</text>`; }); }
+  if(intraMode) svg+=`<text class="ax" x="${padL+2}" y="${padT+9}">장중 5분 · ${fmtDate(ip[0][0])} ~ ${ip[ip.length-1][0].slice(11)}</text>`;
   if(card.zero&&lo<0&&hi>0){ const y0=Y(0); svg+=`<line x1="${padL}" x2="${W-padR}" y1="${y0}" y2="${y0}" style="stroke:var(--mute)" stroke-width="1"/><text class="ax" x="${W-padR-4}" y="${y0+13}" text-anchor="end">0 아래 = 역전</text>`; }
   // x축 눈금
-  const spanY=(t1-tmin)/(365.25*864e5);
+  const spanY=(t1-tmin)/(365.25*864e5), spanD=(t1-tmin)/864e5;
   const xt=[]; const sy=new Date(tmin).getUTCFullYear(), ey=new Date(t1).getUTCFullYear();
-  if(spanY>2.5){ const stepY=spanY>14?5:spanY>6?2:1; for(let y=Math.ceil(sy/stepY)*stepY;y<=ey;y+=stepY){ const t=Date.UTC(y,0,1); if(t>=tmin) xt.push([t,String(y)]); } }
+  if(spanD<=2){ const st3=3600e3*(spanD>0.6?6:2); for(let t=Math.ceil(tmin/st3)*st3;t<=t1;t+=st3){ const dd=new Date(t); xt.push([t,dd.getUTCHours()===0?`${dd.getUTCMonth()+1}/${dd.getUTCDate()}`:`${dd.getUTCHours()}시`]); } }
+  else if(spanD<=100){ const sd=spanD>45?14:spanD>12?7:1; const t0d=Math.ceil(tmin/864e5)*864e5; for(let t=t0d;t<=t1;t+=sd*864e5){ const dd=new Date(t); xt.push([t,`${dd.getUTCMonth()+1}/${dd.getUTCDate()}`]); } }
+  else if(spanY>2.5){ const stepY=spanY>14?5:spanY>6?2:1; for(let y=Math.ceil(sy/stepY)*stepY;y<=ey;y+=stepY){ const t=Date.UTC(y,0,1); if(t>=tmin) xt.push([t,String(y)]); } }
   else { const stepM=spanY>1.2?6:spanY>0.5?3:1; for(let y=sy;y<=ey;y++) for(let m=0;m<12;m+=stepM){ const t=Date.UTC(y,m,1); if(t>=tmin&&t<=t1) xt.push([t,m===0?`${y}`:`${m+1}월`]); } }
   xt.forEach(([t,lab])=>{ const x=X(t); if(x<padL+10||x>W-padR-10) return; svg+=`<line x1="${x}" x2="${x}" y1="${padT}" y2="${H-padB}" style="stroke:var(${"--grid"})" stroke-width="1"/><text class="ax" x="${x}" y="${H-6}" text-anchor="middle">${lab}</text>`; });
 

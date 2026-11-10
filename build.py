@@ -304,6 +304,20 @@ def main() -> int:
             else:
                 log.info("계산: %-12s ✓ %d건, 기준일 %s", ind["id"], len(obj["series"]), obj["as_of"])
 
+    # 1일(1D) 차트용 장중 데이터 (Yahoo 5분, 최근 24시간)
+    intra, intra_err = {}, []
+    for ind in inds:
+        if ind.get("intraday"):
+            try:
+                intra[ind["id"]] = yahoo.fetch_intraday(ind["intraday"], float(ind.get("intraday_scale", 1)))
+            except Exception as e:  # noqa: BLE001
+                intra_err.append(ind["id"])
+                log.warning("  ✗ 장중 %s: %s", ind["id"], mask(str(e))[:120])
+    if intra:
+        old_intra = (read_json("intraday") or {}).get("series", {})
+        write_json("intraday", {"updated_at": now_kst(), "series": {**old_intra, **intra}})
+        log.info("장중 데이터: %d개 지표%s", len(intra), f" (실패 {intra_err})" if intra_err else "")
+
     # manifest.json: 페이지와 일일 브리핑이 읽는 목록·요약
     today = today_kst()
     log.info("일정 수집")

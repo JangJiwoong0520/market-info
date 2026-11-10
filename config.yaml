@@ -135,8 +135,9 @@ sections:
   - id: sentiment
     label: 심리지표
     eyebrow: SENTIMENT
-    note: VIX · 공포·탐욕 (0 극단적 공포 ~ 100 극단적 탐욕)
+    note: VIX · 공포·탐욕 (0 극단적 공포 ~ 100 극단적 탐욕) · CNN은 최근 1년부터 누적
     periods: ["1Y", "3Y", "5Y", "10Y", "20Y", "YTD"]
+    default_period: 1Y
     cards:
       - { main: vix }
       - { main: cnn_fg, range: [0, 100] }

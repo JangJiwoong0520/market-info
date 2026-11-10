@@ -280,6 +280,7 @@ function render(){
     const periods=s.periods||M.periods;
     PERIOD[s.id]=periods.includes("10Y")?"10Y":periods[periods.length-1];
     if(s.type==="exports"||s.id==="macro"||s.type==="fav") PERIOD[s.id]="5Y";
+    if(s.default_period) PERIOD[s.id]=s.default_period;
     const box=document.getElementById("per-"+s.id);
     if(box){
       box.innerHTML=periods.map(p=>`<button type="button" data-p="${p}"${p===PERIOD[s.id]?" class=on":""}>${p==="YTD"?"YTD":p.replace("Y","년")}</button>`).join("");

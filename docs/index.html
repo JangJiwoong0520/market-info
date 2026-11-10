@@ -475,7 +475,7 @@ function renderEarnings(){
       `<td class="n">${n0(r.op_ly)}</td><td class="n">${n0(r.op_cons)}${r.quarter?`<small>${esc(r.quarter)}</small>`:""}</td></tr>`;
     else body+=`<tr><td class="t">${esc(r.when||"–")}<small>${r.when==="개장 전"?"한국 밤":r.when==="장 마감 후"?"한국 다음날 새벽":""}</small></td>`+
       `<td class="e"><b>${esc(r.symbol)}</b><small class="sub2">${esc(r.name)} · 시총 ${fmt(r.cap_b,0)}B$</small></td>`+
-      `<td class="n">${esc(r.eps_ly||"–")}</td><td class="n">${esc(r.eps_cons||"–")}${r.n_est?`<small>${esc(r.n_est)}명</small>`:""}</td></tr>`;
+      `<td class="n">${esc(r.eps_ly||"–")}</td><td class="n">${esc(r.eps_cons||"–")}${/^\d+$/.test(r.n_est||"")?`<small>${esc(r.n_est)}명</small>`:""}</td></tr>`;
   });
   const more=all.length>rows.length?`<button type="button" class="emore" data-more="1">더 보기 (${all.length-rows.length}건 더 · ${earnAll?"":"앞으로 "+(earnTab==="kr"?"3주":"2주")})</button>`:(earnAll&&all.length?`<button type="button" class="emore" data-more="0">이번 주만 보기</button>`:"");
   box.innerHTML=`<div class="etabs" role="tablist">${["kr","us"].map(t=>`<button type="button" role="tab" data-t="${t}" aria-selected="${t===earnTab}" class="${t===earnTab?"on":""}">${t==="kr"?"국내":"미국"} <small>${(EARN[t]||[]).length}건</small></button>`).join("")}</div>`+

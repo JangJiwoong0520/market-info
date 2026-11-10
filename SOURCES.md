@@ -62,6 +62,19 @@
 - **사용자 결정(2026-11-09): 개인·비상업 목적이므로 야후 데이터 사용.**
 - 대응: `config.yaml`에서 지표별 `public: false`로 바꾸면 다음 실행 때 공개 JSON에서 삭제됨.
 
+## 개인 참고용 추가 출처 (2026-11-10, 사용자 결정: 본인만 참고·배포 안 함)
+| 항목 | 출처 | 비고 |
+|---|---|---|
+| VIX | Yahoo `^VIX` | 당일 값 |
+| 美 공포·탐욕 | CNN `production.dataviz.cnn.io/index/fearandgreed/graphdata/{날짜}` | 공식 API 아님, 약 1년 이력 → 매일 누적 |
+| 韓 공포·탐욕 | StockHub `stockhub.kr/api/fear-greed/history` | 최근 30일만 → 매일 누적 |
+| 코인 공포·탐욕 | alternative.me `api.alternative.me/fng/` | 출처 표기 조건으로 이용 허용, 2018년~ |
+| 일정 컨센서스 | ForexFactory 이번 주 내보내기 | 발표 주간만 |
+| 국내 실적 일정 | KRX KIND IR 일정 (`irschedule.do`, method=searchIRScheduleSub, forward=searchirschedule_sub) | 실적·Earnings 제목만, 회사코드 5자리+0 = 종목코드 |
+| 국내 영업이익 컨센서스·전년 동기 | 네이버 `m.stock.naver.com/api/stock/{코드}/finance/quarter` (FnGuide) | 억원, isConsensus=Y 열 |
+| 미국 실적 일정·EPS 컨센서스 | Nasdaq `api.nasdaq.com/api/calendar/earnings?date=` | 시가총액 300억 달러 이상 |
+- 모두 `config.yaml`에서 끌 수 있음 (`public: false`, `calendar_auto.forexfactory: false`, `earnings.enabled: false`).
+
 ## 더 빠른 출처로 교체 (2026-11-10)
 | 지표 | 이전 | 변경 | 이유 |
 |---|---|---|---|

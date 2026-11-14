@@ -93,14 +93,15 @@ def load_calendar() -> list[dict]:
 
 
 def merge(events: list[dict], ff: list[dict], today: str) -> list[dict]:
-    """우리 일정(미국) 중 같은 한국시간 날짜·시각의 ForexFactory 항목을 붙이고, 남는 중요 항목은 별도 줄로."""
+    """우리 일정(미국) 중 같은 한국시간 날짜·시각의 ForexFactory 항목을 붙이고, 남는 중요 항목은 별도 줄로.
+    today 이전 일정은 뺀다 (공개 페이지 build.py는 '이번 주' 보기를 위해 이번 주 월요일을 넘긴다)."""
     rows = []
     for e in ff:
         if e.get("country") != "USD" or e.get("impact") not in ("High", "Medium"):
             continue
         dt = datetime.fromisoformat(e["date"]).astimezone(KST)
         rows.append({"date": dt.strftime("%Y-%m-%d"), "time": dt.strftime("%H:%M"),
-                     "name": ko(e["title"]), "prev": e.get("previous") or "", "fc": e.get("forecast") or "",
+                     "name": ko(e["title"]), "key": e["title"], "prev": e.get("previous") or "", "fc": e.get("forecast") or "",
                      "importance": 3 if e["impact"] == "High" else 2})
     used = set()
     out = [dict(e) for e in events if e["date"] >= today]
@@ -110,13 +111,13 @@ def merge(events: list[dict], ff: list[dict], today: str) -> list[dict]:
         hits = [i for i, r in enumerate(rows) if r["date"] == ev["date"] and r["time"] == ev.get("time")]
         if hits:
             hits.sort(key=lambda i: ("근원" in rows[i]["name"], rows[i]["name"]))   # 헤드라인 먼저, 근원 다음
-            ev["ff"] = [{"name": rows[i]["name"], "prev": rows[i]["prev"], "fc": rows[i]["fc"]} for i in hits]
+            ev["ff"] = [{"name": rows[i]["name"], "key": rows[i]["key"], "prev": rows[i]["prev"], "fc": rows[i]["fc"]} for i in hits]
             used.update(hits)
     for i, r in enumerate(rows):
         if i in used or r["date"] < today:
             continue
         out.append({"date": r["date"], "time": r["time"], "country": "US", "event": r["name"], "importance": r["importance"],
-                    "extra": True, "ff": [{"name": "", "prev": r["prev"], "fc": r["fc"]}] if (r["prev"] or r["fc"]) else []})
+                    "extra": True, "ff": [{"name": "", "key": r["key"], "prev": r["prev"], "fc": r["fc"]}] if (r["prev"] or r["fc"]) else []})
     out.sort(key=lambda e: (e["date"], e.get("time") or "99:99"))
     return out
 

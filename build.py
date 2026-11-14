@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from collectors import brazil, calendar, customs, earnings, ecos, fred, sentiment, treasury, yahoo
+from collectors import actuals, brazil, calendar, customs, earnings, ecos, fred, sentiment, treasury, yahoo
 from collectors.common import CollectorError, mask, parse_date, today_kst
 
 ROOT = Path(__file__).resolve().parent
@@ -28,6 +28,7 @@ COLLECTORS = {"ecos": ecos, "fred": fred, "yahoo": yahoo, "bcb": brazil, "tesour
               "stockhub": sentiment}
 
 log = logging.getLogger("market-info")
+KST = timezone(timedelta(hours=9))
 
 
 # ── 준비 ──────────────────────────────────────────────────
@@ -293,11 +294,67 @@ def attach_prev_consensus(events: list[dict], cfg: dict, inds: list[dict], objs:
             unit = {"%": "%", "천명": "천명"}.get(ind.get("unit", ""), "")
             e["prev"] = f"{v:,.{dec}f}{unit}"
             e["prev_label"] = " ".join(x for x in (period_label(k, ind.get("cycle")), e.pop("prev_note", "")) if x)
+            e["prev_key"] = k                          # 이 값의 기준일 — 발표 후 '실제치' 판단에 사용
         else:
             e.pop("prev_note", None)
         for c in cons:
             if str(c.get("date")) == e["date"] and str(c.get("match", "")) in e["event"]:
                 e["consensus"] = str(c["value"])
+
+
+def event_passed(e: dict, now: datetime) -> bool:
+    """한국시간 기준으로 발표 시각이 지났는지. 시각이 없으면 다음 날부터, '오전'은 정오부터."""
+    t = e.get("time") or ""
+    hhmm = t if len(t) == 5 and t[2] == ":" else ("12:00" if t == "오전" else None)
+    if hhmm:
+        return datetime.strptime(f"{e['date']} {hhmm}", "%Y-%m-%d %H:%M").replace(tzinfo=KST) <= now
+    return e["date"] < now.strftime("%Y-%m-%d")
+
+
+def freeze_past(events: list[dict], old_events: list[dict], now: datetime, week_start: str) -> list[dict]:
+    """지난 일정 처리 ('이번 주' 보기용).
+    - 이전 값: 발표 전에 저장해 둔 값으로 고정 (안 그러면 발표 뒤 '이전'에 새 발표치가 보임)
+    - 실제치(ForexFactory 없는 일정): 우리 데이터의 최신 기준일이 이전 값보다 새로우면 그 값
+    - ForexFactory 항목: 이번 실행에서 못 받았으면 지난번 저장분(실제치 포함)을 그대로 사용
+    - 이번 실행에서 빠진 이번 주 지난 일정(ForexFactory 실패 등)은 지난번 저장분을 살림"""
+    old = {(o["date"], o["event"]): o for o in old_events}
+    seen = set()
+    for e in events:
+        key = (e["date"], e["event"])
+        seen.add(key)
+        if not event_passed(e, now):
+            continue
+        o = old.get(key) or {}
+        if o.get("ff"):
+            if not e.get("ff"):
+                e["ff"] = o["ff"]
+            else:
+                prev_ff = {f.get("key") or f.get("name"): f for f in o["ff"]}
+                for f in e["ff"]:
+                    pf = prev_ff.get(f.get("key") or f.get("name")) or {}
+                    if pf.get("act") and not f.get("act"):
+                        f.update({k: pf[k] for k in ("act", "vs", "act_src") if k in pf})
+        if "prev" in e:
+            cur_key, cur_val = e.get("prev_key"), e.get("prev")
+            if o.get("prev_key"):
+                e["prev"], e["prev_label"], e["prev_key"] = o.get("prev", ""), o.get("prev_label", ""), o["prev_key"]
+                if cur_key and cur_key > o["prev_key"]:
+                    e["actual"] = cur_val
+                    if e.get("consensus"):
+                        e["vs"] = actuals.compare(cur_val, e["consensus"])
+                elif o.get("actual"):
+                    e["actual"] = o["actual"]
+            else:                                         # 발표 전 저장분이 없으면 '이전'을 알 수 없음 → 비움
+                for k in ("prev", "prev_label", "prev_key"):
+                    e.pop(k, None)
+    ff_now = {(e["date"], f.get("key") or f.get("name")) for e in events for f in (e.get("ff") or [])}
+    for o in old_events:
+        if week_start <= o["date"] and (o["date"], o["event"]) not in seen and event_passed(o, now):
+            if any((o["date"], f.get("key") or f.get("name")) in ff_now for f in (o.get("ff") or [])):
+                continue                                  # 같은 발표가 다른 이름 줄로 이미 있음
+            events.append(o)
+    events.sort(key=lambda e: (e["date"], e.get("time") or "99:99"))
+    return events
 
 
 # ── 메인 ──────────────────────────────────────────────────
@@ -364,7 +421,9 @@ def main() -> int:
     # manifest.json: 페이지와 일일 브리핑이 읽는 목록·요약
     today = today_kst()
     log.info("일정 수집")
-    events, cal_err = calendar.collect(cfg, today)
+    week_start = today - timedelta(days=today.weekday())          # 이번 주 월요일 ('이번 주' 보기)
+    week_end = week_start + timedelta(days=6)
+    events, cal_err = calendar.collect(cfg, today, since=week_start)
     for e in cal_err:
         failed.append({"id": "calendar", "name": "주요 일정", "error": mask(e)[:200]})
         log.warning("  ✗ %s", mask(e)[:200])
@@ -373,13 +432,30 @@ def main() -> int:
             from local_view import FF_URL, merge as ff_merge
             from collectors.common import get as http_get
             ff = http_get(FF_URL, headers={"User-Agent": "market-info/1.0"}).json()
-            events = ff_merge(events, ff, today.isoformat())
+            events = ff_merge(events, ff, week_start.isoformat())
             log.info("  ✓ ForexFactory 컨센서스 %d건 연결", sum(1 for e in events if e.get("ff")))
         except Exception as e:  # noqa: BLE001
             failed.append({"id": "forexfactory", "name": "일정 컨센서스", "error": mask(str(e))[:200]})
             log.warning("  ✗ ForexFactory: %s", mask(str(e))[:200])
     attach_prev_consensus(events, cfg, inds, objs)
-    write_json("calendar", {"updated_at": now_kst(), "events": events})
+    now = datetime.now(KST)
+    rules = cfg.get("calendar_actuals") or {}
+    if rules:                                              # 발표된 美 지표의 실제치 (FRED에서 계산)
+        try:
+            n_act, act_err = actuals.attach(events, rules, now)
+            log.info("  ✓ 실제치 %d건 (FRED)", n_act)
+            for e in act_err:
+                failed.append({"id": "actuals", "name": "일정 실제치", "error": mask(e)[:200]})
+                log.warning("  ✗ 실제치 %s", mask(e)[:200])
+        except Exception as e:  # noqa: BLE001
+            failed.append({"id": "actuals", "name": "일정 실제치", "error": mask(str(e))[:200]})
+            log.warning("  ✗ 실제치: %s", mask(str(e))[:200])
+    old_cal = read_json("calendar") or {}
+    events = freeze_past(events, (old_cal.get("week") or []) + (old_cal.get("events") or []), now, week_start.isoformat())
+    week = [e for e in events if week_start.isoformat() <= e["date"] <= week_end.isoformat()]
+    events = [e for e in events if e["date"] >= today.isoformat()]
+    write_json("calendar", {"updated_at": now_kst(), "events": events,
+                            "week_start": week_start.isoformat(), "week": week})
     cal = [e for e in events if e["date"] <= (today + timedelta(days=21)).isoformat()]
 
     # 실적발표 일정 (국내 KIND + 네이버 컨센서스, 미국 Nasdaq)
@@ -406,6 +482,7 @@ def main() -> int:
         "updated_at": now_kst(),
         "failed": failed,
         "calendar": cal,
+        "calendar_week": {"start": week_start.isoformat(), "end": week_end.isoformat(), "events": week},
         "earnings": earn_info,
         "sources": cfg["sources"],
         "indicators": {

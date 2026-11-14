@@ -68,18 +68,20 @@ def copom_events(start: date, end: date) -> list[dict]:
     return out
 
 
-def collect(cfg: dict, today: date) -> tuple[list[dict], list[str]]:
-    """반환: (일정 목록, 실패 메시지 목록). 한 출처가 실패해도 나머지는 그대로."""
+def collect(cfg: dict, today: date, since: date | None = None) -> tuple[list[dict], list[str]]:
+    """반환: (일정 목록, 실패 메시지 목록). 한 출처가 실패해도 나머지는 그대로.
+    since: 이 날짜 이후 일정만 (기본 = 오늘. '이번 주' 보기용으로 이번 주 월요일을 넘길 수 있음)."""
+    since = since or today
     auto = cfg.get("calendar_auto") or {}
     end = today + timedelta(days=60)
     events, errors = [], []
     try:
-        events += fred_events(auto.get("fred_releases") or [], today, end)
+        events += fred_events(auto.get("fred_releases") or [], since, end)
     except Exception as e:  # noqa: BLE001
         errors.append(f"FRED 일정: {e}")
     if auto.get("copom"):
         try:
-            events += copom_events(today, end)
+            events += copom_events(since, end)
         except Exception as e:  # noqa: BLE001
             errors.append(f"Copom 일정: {e}")
     for ev in cfg.get("calendar") or []:
@@ -87,6 +89,6 @@ def collect(cfg: dict, today: date) -> tuple[list[dict], list[str]]:
             events.append(normalize(ev))
         except Exception as e:  # noqa: BLE001
             errors.append(f"수동 일정 형식 오류 {ev}: {e}")
-    events = [e for e in events if e["date"] >= today.isoformat()]      # 지난 일정 제외
+    events = [e for e in events if e["date"] >= since.isoformat()]      # 그 전 일정 제외
     events.sort(key=lambda e: (e["date"], e["time"] or "99:99"))
     return events, errors

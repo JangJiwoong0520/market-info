@@ -240,3 +240,27 @@ calendar:
   - { date: "2027-12-08", time_et: "14:00", country: US, event: FOMC 기준금리 결정, importance: 3, prev: us_fed, prev_note: 상단 }
   # 한국은행 금통위 통화정책방향 결정회의 — bok.or.kr 일정 및 자료 (2026-11-09 확인, 2027년 일정은 아직 미공개)
   - { date: "2026-11-26", time: "오전", country: KR, event: 한은 금통위 기준금리 결정, importance: 3, prev: kr_base }
+
+# 주요 일정 '실제치' — ForexFactory 항목 제목(영문) → FRED 시리즈와 계산 방식 (collectors/actuals.py)
+#  calc: pct1 전월비 % / pct12 전년동월비 % / diff 전월 대비 증감 / level 값 그대로, scale: 단위 맞춤(천명 → 명 등)
+#  시리즈는 FRED 시리즈 페이지에서 제목·계절조정 여부 확인 (2026-11-14). 예상치(ForexFactory)와 같은 기준(계절조정 등)으로 맞춤
+calendar_actuals:
+  "CPI m/m":                     { series: CPIAUCSL, calc: pct1 }          # 계절조정
+  "Core CPI m/m":                { series: CPILFESL, calc: pct1 }
+  "CPI y/y":                     { series: CPIAUCNS, calc: pct12 }         # 전년비는 원계열(BLS 발표 기준)
+  "Core CPI y/y":                { series: CPILFENS, calc: pct12 }
+  "PPI m/m":                     { series: PPIFIS,   calc: pct1 }          # 최종수요, 계절조정
+  "Core PPI m/m":                { series: PPIFES,   calc: pct1 }          # 최종수요(식품·에너지 제외), 계절조정
+  "Retail Sales m/m":            { series: RSAFS,    calc: pct1 }
+  "Core Retail Sales m/m":       { series: RSFSXMV,  calc: pct1 }          # 자동차·부품 제외
+  "Non-Farm Employment Change":  { series: PAYEMS,   calc: diff, scale: 1000 }
+  "Unemployment Rate":           { series: UNRATE,   calc: level }
+  "Average Hourly Earnings m/m": { series: CES0500000003, calc: pct1 }
+  "Unemployment Claims":         { series: ICSA,     calc: level }
+  "Core PCE Price Index m/m":    { series: PCEPILFE, calc: pct1 }
+  "Personal Income m/m":         { series: PI,       calc: pct1 }
+  "Personal Spending m/m":       { series: PCE,      calc: pct1 }
+  "Advance GDP q/q":             { series: A191RL1Q225SBEA, calc: level }  # 전기비 연율
+  "Prelim GDP q/q":              { series: A191RL1Q225SBEA, calc: level }
+  "Final GDP q/q":               { series: A191RL1Q225SBEA, calc: level }
+  "JOLTS Job Openings":          { series: JTSJOL,   calc: level, scale: 1000 }

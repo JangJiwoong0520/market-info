@@ -211,6 +211,10 @@ section{padding:26px 0 6px}
 .cal td.t small{display:block;font-size:10.5px;color:var(--mute)}
 .cal th.n small{display:block;font-weight:400}
 .emore{display:block;width:calc(100% - 24px);margin:10px 12px 0;font:inherit;font-size:13px;font-weight:600;color:var(--acc);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:9px;cursor:pointer}
+.cal td.n.a{font-weight:800}
+.cal tr.day.past td{opacity:.7}
+.cal .etabs+table{border-top:0}
+@media (max-width:480px){.cal td.i,.cal th.i{display:none}.cal td.n{width:56px;font-size:12px}.cal td.t{width:40px}}
 .cal .ffx{font-size:10px;color:var(--mute);border:1px solid var(--bd);border-radius:3px;padding:0 3px;font-weight:400}
 .empty{padding:22px 16px;color:var(--mute);font-size:13px;text-align:center}
 
@@ -329,8 +333,7 @@ function render(){
   SECTIONS.forEach(s=>{
     if(s.type==="fav"){ PERIOD.fav="1Y"; renderFavBasis(); return; }
     const periods=s.periods||M.periods;
-    PERIOD[s.id]=periods.includes("10Y")?"10Y":periods[periods.length-1];
-    if(s.type==="exports"||s.id==="macro"||s.type==="fav") PERIOD[s.id]="5Y";
+    PERIOD[s.id]=periods.includes("1Y")?"1Y":periods[0];          // 기본 = 1년 (1년 버튼이 없으면 가장 짧은 기간)
     if(s.default_period) PERIOD[s.id]=s.default_period;
     const box=document.getElementById("per-"+s.id);
     if(box){
@@ -620,23 +623,38 @@ function renderEarnings(){
 }
 
 // ── 내 PC 전용: ForexFactory 컨센서스가 붙은 일정 (공개 페이지에서는 실행 안 됨) ──
+let LOCALCAL=null;
 function loadLocalCalendar(){
   fetch("local/calendar_local.json",{cache:"no-cache"}).then(r=>r.ok?r.json():null).then(j=>{
     if(!j||!j.events) return;
-    const box=document.querySelector("#calendar .cal"); if(!box) return;
-    box.outerHTML=calendarHTML(j.events,j);
+    LOCALCAL=j; renderCalendar();
   }).catch(()=>{});
 }
 
-function calendarHTML(rowsIn,local){
-  const rows=rowsIn||M.calendar||[];
-  if(!rows.length) return `<div class="cal"><div class="empty">앞으로 3주 안에 등록된 일정이 없습니다.</div></div>`;
+// 보기: "week" = 이번 주(월~일, 지난 발표 포함) / "next" = 앞으로 3주. 마지막 선택을 이 기기에 기억
+let CALVIEW="next"; try{ CALVIEW=localStorage.getItem("calView")==="week"?"week":"next"; }catch(e){}
+function renderCalendar(){
+  const box=document.querySelector("#calendar .cal"); if(box) box.outerHTML=calendarHTML();
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("#calendar .etabs button[data-cv]"); if(!b) return;
+  CALVIEW=b.dataset.cv; try{ localStorage.setItem("calView",CALVIEW); }catch(_){}
+  renderCalendar();
+});
+const actCell=(v,vs)=>v?`<span class="${vs==="up"?"up":vs==="dn"?"dn":""}">${esc(v)}</span>`:"–";
+
+function calendarHTML(){
+  const wk=M.calendar_week||{};
+  const local=CALVIEW==="next"&&LOCALCAL?LOCALCAL:null;
+  const rows=CALVIEW==="week"?(wk.events||[]):(local?local.events:(M.calendar||[]));
+  const tabs=`<div class="etabs" role="group" aria-label="일정 기간"><button type="button" data-cv="week" class="${CALVIEW==="week"?"on":""}" aria-pressed="${CALVIEW==="week"}">이번 주${wk.start?` <small>${wk.start.slice(5).replace("-",".")}~${wk.end.slice(5).replace("-",".")}</small>`:""}</button><button type="button" data-cv="next" class="${CALVIEW==="next"?"on":""}" aria-pressed="${CALVIEW==="next"}">앞으로 3주</button></div>`;
+  if(!rows.length) return `<div class="cal">${tabs}<div class="empty">${CALVIEW==="week"?"이번 주에":"앞으로 3주 안에"} 등록된 일정이 없습니다.</div></div>`;
   const todayK=new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
   const W="일월화수목금토";
   const hasCons=rows.some(r=>r.consensus||(r.ff&&r.ff.some(f=>f.fc)));
-  let html=`<div class="cal"><table><thead><tr><th>시간</th><th>일정</th><th>중요</th><th class="n">이전</th><th class="n">예상</th></tr></thead><tbody>`, last="";
+  let html=`<div class="cal">${tabs}<table><thead><tr><th>시간</th><th>일정</th><th class="i">중요</th><th class="n">이전</th><th class="n">예상</th><th class="n">실제</th></tr></thead><tbody>`, last="";
   rows.forEach(r=>{
-    if(r.date!==last){ const d=new Date(r.date+"T00:00:00"); html+=`<tr class="day"><td colspan="5">${r.date.slice(5).replace("-",".")} (${W[d.getDay()]})${r.date===todayK?" · 오늘":""}</td></tr>`; last=r.date; }
+    if(r.date!==last){ const d=new Date(r.date+"T00:00:00"); html+=`<tr class="day${r.date<todayK?" past":""}"><td colspan="6">${r.date.slice(5).replace("-",".")} (${W[d.getDay()]})${r.date===todayK?" · 오늘":""}</td></tr>`; last=r.date; }
     const C={US:"미국",KR:"한국",BR:"브라질"};
     const imp=Math.max(1,Math.min(3,r.importance||1));
     html+=`<tr><td class="t">${esc(r.time||(r.country==="BR"?"현지":""))}</td>`+
@@ -644,15 +662,18 @@ function calendarHTML(rowsIn,local){
       `<td class="i" aria-label="중요도 ${imp} / 3">${"●".repeat(imp)}<span class="o">${"●".repeat(3-imp)}</span></td>`+
       (r.ff&&r.ff.length
         ? `<td class="n">${r.ff.map(f=>`<span class="fl">${esc(f.prev||"–")}${f.name?`<small>${esc(f.name)}</small>`:""}</span>`).join("")}</td>`+
-          `<td class="n">${r.ff.map(f=>`<span class="fl">${esc(f.fc||"–")}${f.name?`<small>&nbsp;</small>`:""}</span>`).join("")}</td></tr>`
+          `<td class="n">${r.ff.map(f=>`<span class="fl">${esc(f.fc||"–")}${f.name?`<small>&nbsp;</small>`:""}</span>`).join("")}</td>`+
+          `<td class="n a">${r.ff.map(f=>`<span class="fl">${actCell(f.act,f.vs)}${f.name?`<small>&nbsp;</small>`:""}</span>`).join("")}</td></tr>`
         : `<td class="n">${r.prev?esc(r.prev)+(r.prev_label?`<small>${esc(r.prev_label)}</small>`:""):"–"}</td>`+
-          `<td class="n">${r.consensus?esc(r.consensus):"–"}</td></tr>`);
+          `<td class="n">${r.consensus?esc(r.consensus):"–"}</td>`+
+          `<td class="n a">${actCell(r.actual,r.vs)}</td></tr>`);
   });
   const note=local
     ? `🔒 <b>내 PC 전용 보기</b> · 이전·예상: ForexFactory 이번 주 일정(${esc(local.updated_at)} 받음, 개인 이용 — 공개·고객 자료로 옮기지 마세요) · 그 외 이전 = 이 페이지 데이터`
     : (rows.some(r=>r.ff&&r.ff.length)
         ? `이전·예상 = ForexFactory 이번 주 일정(전월비 등, 발표 주간에만 제공) · 그 외 이전 = 이 페이지 수집 데이터(최근 발표치)`
-        : `이전 = 가장 최근 발표치(이 페이지 수집 데이터) · 예상 = 시장 컨센서스${hasCons?"":"(아직 입력 없음)"}`);
+        : `이전 = 가장 최근 발표치(이 페이지 수집 데이터) · 예상 = 시장 컨센서스${hasCons?"":"(아직 입력 없음)"}`)
+      + `<br>실제 = 발표 후 FRED(미국 지표)·이 페이지 데이터로 계산, 다음 업데이트 때 반영 · 예상보다 <span class="up">높으면 빨강</span>, <span class="dn">낮으면 파랑</span>`;
   return html+`</tbody></table><div class="calnote${local?" loc":""}">${note}</div></div>`;
 }
 
